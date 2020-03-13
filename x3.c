@@ -84,7 +84,8 @@ size_t find_best_match(char *p)
 {
 	char *end = p + FORWARD_WINDOW;
 
-	for (int tc = 2; tc > 0; --tc) {
+	/* FIXME tc = 1, 2, 3, ... optimize */
+	for (int tc = 3; tc > 0; --tc) {
 		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
 			/* trying match string of the length 'len' chars */
 			int count = 0;
