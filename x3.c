@@ -155,7 +155,7 @@ size_t calc_cost(struct elem *e, char *curr_pos)
 	assert(dist < BACKWARD_WINDOW + MAX_MATCH_LEN + 1);
 
 	/* cost function to be optimized */
-	size_t cost = 0 * len + 512 * freq + 1 * (BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist);
+	size_t cost = 0 * len + 256 * freq + 1 * (BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist);
 
 	(void)dist;
 
