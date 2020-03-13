@@ -157,8 +157,6 @@ size_t calc_cost(struct elem *e, char *curr_pos)
 	/* cost function to be optimized */
 	size_t cost = 0 * len + 256 * freq + 1 * (BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist);
 
-	(void)dist;
-
 	return cost;
 }
 
@@ -235,7 +233,6 @@ size_t find_in_dictionary(const char *p)
 #if 0
 			printf("dictionary match @ [%i] len %zu\n", i, dict[i].len);
 #endif
-			/*return i;*/
 			if (dict[i].len > best_len) {
 				best_len = dict[i].len;
 				best_len_i = i;
