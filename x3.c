@@ -269,12 +269,12 @@ void update_dict(char *p)
 		}
 
 		dict[i].cost = calc_cost(&dict[i], p);
-
+#if 0
 		assert(p >= dict[i].last_pos);
 		size_t dist = p - dict[i].last_pos;
 		size_t freq = dict[i].freq;
 		size_t cost = dict[i].cost;
-		if (/*dist > BACKWARD_WINDOW*/ 0) {
+		if (0) {
 			if (is_zero(&dict[i])) {
 				printf("ERR zeroing zero entry [%zu/%zu] freq=%zu dist=%zu\n", i, elems, dict[i].freq, dist);
 				printf("ERR zeroing zero entry\n");
@@ -284,12 +284,15 @@ void update_dict(char *p)
 				removed_entries++;
 			}
 		}
+#endif
 	}
 
 	qsort(dict, elems, sizeof(struct elem), cmp);
 
+#if 0
 	assert(elems >= removed_entries);
 	elems -= removed_entries;
+#endif
 #if 0
 	printf("updated: %zu entries (removed %zu)\n", elems, removed_entries);
 #endif
