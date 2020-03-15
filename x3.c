@@ -152,10 +152,12 @@ size_t calc_cost(struct elem *e, char *curr_pos)
 
 	assert(freq > 0);
 
-	assert(dist < BACKWARD_WINDOW + MAX_MATCH_LEN + 1);
-
 	/* cost function to be optimized */
-	size_t cost = 0 * len + 256 * freq + 1 * (BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist);
+	size_t cost = 256 * freq;
+
+	if (dist < BACKWARD_WINDOW + MAX_MATCH_LEN + 1) {
+		cost += 1 * (BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist);
+	}
 
 	return cost;
 }
@@ -270,7 +272,9 @@ void update_dict(char *p)
 
 		assert(p >= dict[i].last_pos);
 		size_t dist = p - dict[i].last_pos;
-		if (dist > BACKWARD_WINDOW) {
+		size_t freq = dict[i].freq;
+		size_t cost = dict[i].cost;
+		if (/*dist > BACKWARD_WINDOW*/ 0) {
 			if (is_zero(&dict[i])) {
 				printf("ERR zeroing zero entry [%zu/%zu] freq=%zu dist=%zu\n", i, elems, dict[i].freq, dist);
 				printf("ERR zeroing zero entry\n");
@@ -407,9 +411,13 @@ void dump_dict()
 	}
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-	FILE *stream = fopen("enwik6", "r");
+	char *path = argc > 1 ? argv[1] : "enwik6";
+
+	printf("path: %s\n", path);
+
+	FILE *stream = fopen(path, "r");
 
 	if (stream == NULL) {
 		abort();
