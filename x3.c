@@ -252,43 +252,15 @@ void update_dict(char *p)
 {
 	struct elem e0;
 	memset(&e0, 0, sizeof(struct elem));
-#if 0
-	size_t removed_entries = 0;
-#endif
+
 	for (size_t i = 0; i < elems; ++i) {
-		if (is_zero(&dict[i])) {
-			printf("ERR zero entry in dictionary!\n");
-			abort();
-		}
+		assert(!is_zero(&dict[i]));
 
 		dict[i].cost = calc_cost(&dict[i], p);
-#if 0
-		assert(p >= dict[i].last_pos);
-		size_t dist = p - dict[i].last_pos;
-		size_t freq = dict[i].freq;
-		size_t cost = dict[i].cost;
-		if (0) {
-			if (is_zero(&dict[i])) {
-				printf("ERR zeroing zero entry [%zu/%zu] freq=%zu dist=%zu\n", i, elems, dict[i].freq, dist);
-				printf("ERR zeroing zero entry\n");
-				abort();
-			} else {
-				dict[i] = e0;
-				removed_entries++;
-			}
-		}
-#endif
 	}
 
 	qsort(dict, elems, sizeof(struct elem), cmp);
 
-#if 0
-	assert(elems >= removed_entries);
-	elems -= removed_entries;
-#endif
-#if 0
-	printf("updated: %zu entries (removed %zu)\n", elems, removed_entries);
-#endif
 	if (elems >= 2) {
 		assert(dict[0].cost >= dict[1].cost);
 		assert(dict[elems-2].cost >= dict[elems-1].cost);
