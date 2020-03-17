@@ -84,7 +84,7 @@ size_t find_best_match(char *p)
 {
 	char *end = p + FORWARD_WINDOW;
 
-	/* FIXME tc = 1, 2, 3, ... optimize */
+	/* tc = 3 found empirically */
 	for (int tc = 3; tc > 0; --tc) {
 		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
 			/* trying match string of the length 'len' chars */
@@ -147,7 +147,6 @@ size_t calc_cost(struct elem *e, char *curr_pos)
 	assert(curr_pos >= e->last_pos);
 
 	size_t dist = curr_pos - e->last_pos;
-	size_t len = e->len;
 	size_t freq = e->freq;
 
 	assert(freq > 0);
@@ -200,10 +199,7 @@ void insert_elem(const struct elem *e)
 {
 	assert(e != NULL);
 
-	if (is_zero(e)) {
-		printf("ERR inserting zero element!\n");
-		abort();
-	}
+	assert(!is_zero(e));
 
 	if (elems >= dict_size) {
 		enlarge_dict();
@@ -222,10 +218,6 @@ void insert_elem(const struct elem *e)
 
 size_t find_in_dictionary(const char *p)
 {
-#if 0
-	printf("find_in_dictionary: %zu elems\n", elems);
-#endif
-
 	size_t best_len = 0;
 	size_t best_len_i;
 
@@ -260,12 +252,13 @@ void update_dict(char *p)
 {
 	struct elem e0;
 	memset(&e0, 0, sizeof(struct elem));
-
+#if 0
 	size_t removed_entries = 0;
-
+#endif
 	for (size_t i = 0; i < elems; ++i) {
 		if (is_zero(&dict[i])) {
 			printf("ERR zero entry in dictionary!\n");
+			abort();
 		}
 
 		dict[i].cost = calc_cost(&dict[i], p);
