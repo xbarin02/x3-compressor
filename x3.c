@@ -110,11 +110,22 @@ size_t find_best_match(char *p)
 }
 
 struct elem {
-	char s[MAX_MATCH_LEN]; /* the string */
+	char s[MAX_MATCH_LEN * /*HACK*/2]; /* the string */
 	size_t len; /* of the length */
 	size_t freq; /* that was already used n-times */
 	char *last_pos; /* recently seen at the position */
 	size_t cost; /* sort key */
+	size_t tag; /* id */
+};
+
+struct item {
+	size_t tag;
+	size_t freq; /* used n-times */
+};
+
+struct ctx {
+	size_t items; /* allocated elements */
+	struct item *arr; /* pointer to the first item */
 };
 
 /* allocated size, enlarged logarithmically */
@@ -122,6 +133,7 @@ size_t dict_logsize = 0;
 size_t dict_size = 1;
 
 struct elem *dict = NULL;
+struct ctx *ctx = NULL;
 
 /* number of elements */
 size_t elems = 0;
@@ -138,6 +150,14 @@ void enlarge_dict()
 	}
 
 	memset(dict + elems, 0, (dict_size - elems) * sizeof(struct elem));
+
+	ctx = realloc(ctx, dict_size * sizeof(struct ctx));
+
+	if (ctx == NULL) {
+		abort();
+	}
+
+	memset(ctx + elems, 0, (dict_size - elems) * sizeof(struct ctx));
 }
 
 size_t calc_cost(struct elem *e, char *curr_pos)
@@ -209,6 +229,7 @@ void insert_elem(const struct elem *e)
 
 	if (is_zero(&dict[elems])) {
 		dict[elems] = *e;
+		dict[elems].tag = elems; /* element is filled except a tag, set the tag */
 		elems++;
 	} else {
 		printf("WARN rewritting non-zero entry\n");
@@ -304,16 +325,108 @@ static void update_model(size_t delta)
 	symbol_count++;
 }
 
-void encode_tag(size_t index)
+int ctx_query_tag(struct ctx *c, size_t tag)
 {
-	stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* +1 due to decision */
+	for (size_t i = 0; i < c->items; ++i) {
+		if (c->arr[i].tag == tag) {
+			return 1;
+		}
+	}
 
-	update_model(index);
+	return 0;
+}
+
+void ctx_add_tag(struct ctx *c, size_t tag)
+{
+	assert(!ctx_query_tag(c, tag));
+
+	c->items++;
+
+	c->arr = realloc(c->arr, c->items * sizeof(struct item));
+
+	if (c->arr == NULL) {
+		abort();
+	}
+
+	c->arr[c->items - 1].tag = tag;
+	c->arr[c->items - 1].freq = 1;
+}
+
+size_t ctx_miss = 0;
+size_t ctx_hit = 0;
+
+/* TODO encode dict[index].tag in context, rather than index */
+void encode_tag(size_t context, size_t index)
+{
+	assert(ctx != NULL);
+
+	struct ctx *c = ctx + context;
+
+	stream_size_gr += 1; /* decision to use dictionary */
+
+	if (ctx_query_tag(c, dict[index].tag)) {
+#if 0
+		ctx_hit++;
+		//stream_size_gr += bio_sizeof_gr(opt_k, 0);
+		//update_model(0);
+		stream_size_gr += 1 + log2_sz(c->items); /* hit + index */
+		// printf("log2(items) = %zu\n", log2_sz(c->items));
+#endif
+	} else {
+		ctx_miss++;
+		ctx_add_tag(c, dict[index].tag);
+		stream_size_gr += /*1 +*/ bio_sizeof_gr(opt_k, index); /* miss + index */
+		update_model(index);
+	}
+
+	// stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* +1 due to decision */
+
+	// update_model(index);
+}
+
+void add_concatenated_words(size_t context_tag, size_t index)
+{
+	// TODO: find context_index
+	size_t context_index = (size_t)-1;
+	for (size_t i = 0; i < elems; ++i) {
+		if (dict[i].tag == context_tag) {
+			context_index = i;
+		}
+	}
+
+	if (context_index == (size_t)-1) {
+		abort();
+	}
+
+	// TODO: if len() + len() is too large, return
+	if (dict[context_index].len + dict[index].len > MAX_MATCH_LEN * 2) {
+		printf("not enough space\n");
+		return;
+	}
+
+	// TODO: fill struct elem
+	struct elem e;
+
+	memcpy(e.s, dict[context_index].s, dict[context_index].len);
+	memcpy(e.s + dict[context_index].len, dict[index].s, dict[index].len);
+
+	e.len = dict[context_index].len + dict[index].len;
+
+	e.freq = 1;
+
+	e.last_pos = dict[context_index].last_pos;
+
+	// TODO: insert new element
+	insert_elem(&e);
+
+	// TODO: invoke update_dict()
 }
 
 void compress(char *ptr, size_t size, FILE *rawstream)
 {
 	char *end = ptr + size;
+
+	size_t context = 0; /* last tag */
 
 	for (char *p = ptr; p < end; ) {
 #if 0
@@ -331,12 +444,16 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
 
-			encode_tag(index);
+			encode_tag(context, index); /* FIXME: add context */
+
+			context = dict[index].tag;
 
 			dict[index].freq++;
 			dict[index].last_pos = p;
 
 			p += len;
+
+			add_concatenated_words(context, index);
 
 			update_dict(p);
 
@@ -425,6 +542,8 @@ int main(int argc, char *argv[])
 	printf("Golomb-Rice stream size: %zu\n", stream_size_gr/8);
 	printf("uncompressed raw output: %zu\n", stream_size_raw_str/8);
 	printf("ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw)/8));
+
+	printf("contexts: hit=%zu miss=%zu\n", ctx_hit, ctx_miss);
 
 #if 0
 	dump_dict();
