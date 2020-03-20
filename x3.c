@@ -364,24 +364,24 @@ void encode_tag(size_t context, size_t index)
 
 	stream_size_gr += 1; /* decision to use dictionary */
 
+#if 1
 	if (ctx_query_tag(c, dict[index].tag)) {
 		ctx_hit++;
-#if 1
+#	if 1
 		//stream_size_gr += bio_sizeof_gr(opt_k, 0);
 		//update_model(0);
 		stream_size_gr += 1 + log2_sz(c->items); /* hit + index */
 		// printf("log2(items) = %zu\n", log2_sz(c->items));
-#endif
+#	endif
 	} else {
 		ctx_miss++;
 		ctx_add_tag(c, dict[index].tag);
-#if 1
+#	if 1
 		stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* miss + index */
 		update_model(index);
-#endif
+#	endif
 	}
-
-#if 0
+#else
 	stream_size_gr += bio_sizeof_gr(opt_k, index); /* +1 due to decision */
 	update_model(index);
 #endif
