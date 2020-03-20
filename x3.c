@@ -110,7 +110,7 @@ size_t find_best_match(char *p)
 }
 
 struct elem {
-	char s[MAX_MATCH_LEN * /*HACK*/2]; /* the string */
+	char s[MAX_MATCH_LEN * /*HACK*/4]; /* the string */
 	size_t len; /* of the length */
 	size_t freq; /* that was already used n-times */
 	char *last_pos; /* recently seen at the position */
@@ -355,6 +355,61 @@ void ctx_add_tag(struct ctx *c, size_t tag)
 size_t ctx_miss = 0;
 size_t ctx_hit = 0;
 
+int elem_query_dictionary(struct elem *e)
+{
+	for (size_t i = 0; i < elems; ++i) {
+		if (dict[i].len == e->len && memcmp(dict[i].s, e->s, e->len) == 0) {
+			return 1;
+		}
+	}
+
+	return 0;
+
+}
+
+/* check whether context+index is present in the dictionary (is should not) */
+int ctx_query_dictionary(size_t context_tag, size_t index)
+{
+	size_t context_index = (size_t)-1;
+	for (size_t i = 0; i < elems; ++i) {
+		if (dict[i].tag == context_tag) {
+			context_index = i;
+		}
+	}
+
+	if (context_index == (size_t)-1) {
+		abort();
+	}
+
+	// now we have (context_index, index)
+
+	// helper struct
+	struct elem e;
+
+	memcpy(e.s, dict[context_index].s, dict[context_index].len);
+	memcpy(e.s + dict[context_index].len, dict[index].s, dict[index].len);
+
+	e.len = dict[context_index].len + dict[index].len;
+
+	// for each item in dictionary
+	for (size_t i = 0; i < elems; ++i) {
+		if (dict[i].len == e.len && memcmp(dict[i].s, e.s, e.len) == 0) {
+#if 0
+			printf("DEBUG: %.*s + %.*s == %.*s\n",
+				dict[context_index].len, dict[context_index].s,
+				dict[index].len, dict[index].s,
+				dict[i].len, dict[i].s
+			);
+#endif
+			return 1; /* found :( */
+		}
+	}
+
+	return 0;
+}
+
+size_t bugs = 0;
+
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context, size_t index)
 {
@@ -363,6 +418,11 @@ void encode_tag(size_t context, size_t index)
 	struct ctx *c = ctx + context;
 
 	stream_size_gr += 1; /* decision to use dictionary */
+
+	if (ctx_query_dictionary(context, index)) {
+		//printf("BUG: found in dictionary\n");
+		bugs++;
+	}
 
 #if 1
 	if (ctx_query_tag(c, dict[index].tag)) {
@@ -402,7 +462,7 @@ void add_concatenated_words(size_t context_tag, size_t index)
 	}
 
 	// if len() + len() is too large, return
-	if (dict[context_index].len + dict[index].len > MAX_MATCH_LEN * 2) {
+	if (dict[context_index].len + dict[index].len > MAX_MATCH_LEN * 4) {
 		printf("not enough space\n");
 		return;
 	}
@@ -418,6 +478,12 @@ void add_concatenated_words(size_t context_tag, size_t index)
 	e.freq = 1;
 
 	e.last_pos = dict[context_index].last_pos;
+
+	// TODO !!! check whether the 'e' is already in the dictionary !!!
+	if (elem_query_dictionary(&e)) {
+		//printf("alreaty there\n");
+		return;
+	}
 
 	// insert new element
 	insert_elem(&e);
@@ -547,6 +613,7 @@ int main(int argc, char *argv[])
 	printf("ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw)/8));
 
 	printf("contexts: hit=%zu miss=%zu\n", ctx_hit, ctx_miss);
+	printf("bugs: %zu\n", bugs);
 
 #if 0
 	dump_dict();
