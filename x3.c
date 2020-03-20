@@ -355,7 +355,7 @@ void ctx_add_tag(struct ctx *c, size_t tag)
 size_t ctx_miss = 0;
 size_t ctx_hit = 0;
 
-/* TODO encode dict[index].tag in context, rather than index */
+/* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context, size_t index)
 {
 	assert(ctx != NULL);
@@ -365,8 +365,8 @@ void encode_tag(size_t context, size_t index)
 	stream_size_gr += 1; /* decision to use dictionary */
 
 	if (ctx_query_tag(c, dict[index].tag)) {
-#if 0
 		ctx_hit++;
+#if 1
 		//stream_size_gr += bio_sizeof_gr(opt_k, 0);
 		//update_model(0);
 		stream_size_gr += 1 + log2_sz(c->items); /* hit + index */
@@ -375,18 +375,21 @@ void encode_tag(size_t context, size_t index)
 	} else {
 		ctx_miss++;
 		ctx_add_tag(c, dict[index].tag);
-		stream_size_gr += /*1 +*/ bio_sizeof_gr(opt_k, index); /* miss + index */
+#if 1
+		stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* miss + index */
 		update_model(index);
+#endif
 	}
 
-	// stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* +1 due to decision */
-
-	// update_model(index);
+#if 0
+	stream_size_gr += bio_sizeof_gr(opt_k, index); /* +1 due to decision */
+	update_model(index);
+#endif
 }
 
 void add_concatenated_words(size_t context_tag, size_t index)
 {
-	// TODO: find context_index
+	// find context_index
 	size_t context_index = (size_t)-1;
 	for (size_t i = 0; i < elems; ++i) {
 		if (dict[i].tag == context_tag) {
@@ -398,13 +401,13 @@ void add_concatenated_words(size_t context_tag, size_t index)
 		abort();
 	}
 
-	// TODO: if len() + len() is too large, return
+	// if len() + len() is too large, return
 	if (dict[context_index].len + dict[index].len > MAX_MATCH_LEN * 2) {
 		printf("not enough space\n");
 		return;
 	}
 
-	// TODO: fill struct elem
+	// fill struct elem
 	struct elem e;
 
 	memcpy(e.s, dict[context_index].s, dict[context_index].len);
@@ -416,10 +419,10 @@ void add_concatenated_words(size_t context_tag, size_t index)
 
 	e.last_pos = dict[context_index].last_pos;
 
-	// TODO: insert new element
+	// insert new element
 	insert_elem(&e);
 
-	// TODO: invoke update_dict()
+	// invoke update_dict()
 }
 
 void compress(char *ptr, size_t size, FILE *rawstream)
@@ -452,9 +455,9 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			dict[index].last_pos = p;
 
 			p += len;
-
+#if 0
 			add_concatenated_words(context, index);
-
+#endif
 			update_dict(p);
 
 			tag_match_count++;
