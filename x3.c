@@ -427,19 +427,13 @@ void encode_tag(size_t context, size_t index)
 #if 1
 	if (ctx_query_tag(c, dict[index].tag)) {
 		ctx_hit++;
-#	if 1
-		//stream_size_gr += bio_sizeof_gr(opt_k, 0);
-		//update_model(0);
 		stream_size_gr += 1 + log2_sz(c->items); /* hit + index */
 		// printf("log2(items) = %zu\n", log2_sz(c->items));
-#	endif
 	} else {
 		ctx_miss++;
 		ctx_add_tag(c, dict[index].tag);
-#	if 1
 		stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* miss + index */
 		update_model(index);
-#	endif
 	}
 #else
 	stream_size_gr += bio_sizeof_gr(opt_k, index); /* +1 due to decision */
@@ -479,9 +473,8 @@ void add_concatenated_words(size_t context_tag, size_t index)
 
 	e.last_pos = dict[context_index].last_pos;
 
-	// TODO !!! check whether the 'e' is already in the dictionary !!!
+	// check whether the 'e' is already in the dictionary
 	if (elem_query_dictionary(&e)) {
-		//printf("alreaty there\n");
 		return;
 	}
 
@@ -513,7 +506,7 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
 
-			encode_tag(context, index); /* FIXME: add context */
+			encode_tag(context, index);
 
 			context = dict[index].tag;
 
