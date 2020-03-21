@@ -126,6 +126,8 @@ struct item {
 struct ctx {
 	size_t items; /* allocated elements */
 	struct item *arr; /* pointer to the first item */
+
+	size_t symb_sum, symb_cnt; /* due to Golomb-Rice coding */
 };
 
 /* allocated size, enlarged logarithmically */
@@ -307,6 +309,18 @@ size_t bio_sizeof_gr(size_t k, size_t N)
 size_t opt_k = 11;
 size_t symbol_sum = 0, symbol_count = 0; /* mean = symbol_sum / symbol_count */
 
+size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
+{
+	if (symb_cnt == 0) return 0;
+
+	int k;
+
+	for (k = 1; (symb_cnt << k) <= symb_sum; ++k)
+		;
+
+	return (size_t)(k - 1);
+}
+
 static void update_model(size_t delta)
 {
 	if (symbol_count == RESET_INTERVAL) {
@@ -459,12 +473,16 @@ void encode_tag(size_t context, size_t index)
 	if (ctx_query_tag(c, dict[index].tag) != NULL) {
 		ctx_hit++;
 
-#	if 1
+#	if 0
 		stream_size_gr += 1 + log2_sz(c->items); /* signal: hit + index */
 #	else
 		if (c->items > 1) {
+			size_t k = get_opt_k(c->symb_sum, c->symb_cnt);
 			size_t item_index = ctx_query_tag_index(c, dict[index].tag);
-			stream_size_gr += 1 + bio_sizeof_gr(4, item_index);
+			stream_size_gr += 1 + bio_sizeof_gr(k, item_index);
+
+			c->symb_sum += item_index;
+			c->symb_cnt++;
 		} else {
 			stream_size_gr += 1; // no information needed
 		}
