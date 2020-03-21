@@ -84,8 +84,8 @@ size_t find_best_match(char *p)
 {
 	char *end = p + FORWARD_WINDOW;
 
-	/* tc = 3 found empirically */
-	for (int tc = /*3*/4; tc > 0; --tc) {
+	/* tc = 4 found empirically */
+	for (int tc = /*4*/5; tc > 0; --tc) {
 		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
 			/* trying match string of the length 'len' chars */
 			int count = 0;
