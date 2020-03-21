@@ -75,7 +75,7 @@ size_t fsize(FILE *stream)
 #define BACKWARD_WINDOW (FORWARD_WINDOW * 128)
 
 /* log. size */
-#define MATCH_LOGSIZE 4
+#define MATCH_LOGSIZE /*4*/3
 
 /* the look-ahead buffer */
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
