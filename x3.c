@@ -336,6 +336,18 @@ struct item *ctx_query_tag(struct ctx *c, size_t tag)
 	return NULL;
 }
 
+size_t ctx_query_tag_index(struct ctx *c, size_t tag)
+{
+	for (size_t i = 0; i < c->items; ++i) {
+		if (c->arr[i].tag == tag) {
+			return i;
+		}
+	}
+
+	return (size_t)-1;
+}
+
+
 void ctx_add_tag(struct ctx *c, size_t tag)
 {
 	assert(!ctx_query_tag(c, tag));
@@ -446,7 +458,13 @@ void encode_tag(size_t context, size_t index)
 #if 1
 	if (ctx_query_tag(c, dict[index].tag) != NULL) {
 		ctx_hit++;
+
+#	if 1
 		stream_size_gr += 1 + log2_sz(c->items); /* signal: hit + index */
+#	else
+		size_t item_index = ctx_query_tag_index(c, dict[index].tag);
+		stream_size_gr += 1 + bio_sizeof_gr(3, item_index);
+#	endif
 		// printf("log2(items) = %zu\n", log2_sz(c->items));
 
 		// increment item->freq
@@ -457,6 +475,7 @@ void encode_tag(size_t context, size_t index)
 		sort_ctx(c);
 	} else {
 		ctx_miss++;
+
 		stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* signal: miss + index */
 		update_model(index);
 
