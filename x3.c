@@ -85,7 +85,7 @@ size_t find_best_match(char *p)
 	char *end = p + FORWARD_WINDOW;
 
 	/* tc = 3 found empirically */
-	for (int tc = 3; tc > 0; --tc) {
+	for (int tc = /*3*/4; tc > 0; --tc) {
 		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
 			/* trying match string of the length 'len' chars */
 			int count = 0;
@@ -535,6 +535,11 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 
 			struct elem e;
 			fill_elem(&e, p, len);
+
+			if (elem_query_dictionary(&e)) {
+				printf("BUG: already there\n");
+			}
+
 			insert_elem(&e);
 
 			p += len;
