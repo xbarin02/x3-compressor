@@ -364,7 +364,6 @@ int elem_query_dictionary(struct elem *e)
 	}
 
 	return 0;
-
 }
 
 /* check whether context+index is present in the dictionary (is should not) */
@@ -381,7 +380,7 @@ int ctx_query_dictionary(size_t context_tag, size_t index)
 		abort();
 	}
 
-	// now we have (context_index, index)
+	// now we have a pair (context_index, index)
 
 	// helper struct
 	struct elem e;
