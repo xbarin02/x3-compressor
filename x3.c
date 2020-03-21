@@ -462,8 +462,12 @@ void encode_tag(size_t context, size_t index)
 #	if 1
 		stream_size_gr += 1 + log2_sz(c->items); /* signal: hit + index */
 #	else
-		size_t item_index = ctx_query_tag_index(c, dict[index].tag);
-		stream_size_gr += 1 + bio_sizeof_gr(3, item_index);
+		if (c->items > 1) {
+			size_t item_index = ctx_query_tag_index(c, dict[index].tag);
+			stream_size_gr += 1 + bio_sizeof_gr(4, item_index);
+		} else {
+			stream_size_gr += 1; // no information needed
+		}
 #	endif
 		// printf("log2(items) = %zu\n", log2_sz(c->items));
 
