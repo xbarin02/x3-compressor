@@ -560,6 +560,7 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 	char *end = ptr + size;
 
 	size_t context = 0; /* last tag */
+	size_t context2 = 0;
 
 	for (char *p = ptr; p < end; ) {
 #if 0
@@ -585,6 +586,8 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			dict[index].last_pos = p;
 
 			p += len;
+
+			if (p >= ptr + 2) { context2 = (unsigned char)p[-1] | (unsigned char)p[-2]; }
 #if 0
 			add_concatenated_words(context, index);
 #endif
@@ -615,6 +618,10 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			insert_elem(&e);
 
 			p += len;
+
+			context = 0;
+
+			if (p >= ptr + 2) { context2 = (unsigned char)p[-1] | (unsigned char)p[-2]; }
 
 			update_dict(p);
 
