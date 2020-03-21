@@ -325,15 +325,15 @@ static void update_model(size_t delta)
 	symbol_count++;
 }
 
-int ctx_query_tag(struct ctx *c, size_t tag)
+struct item *ctx_query_tag(struct ctx *c, size_t tag)
 {
 	for (size_t i = 0; i < c->items; ++i) {
 		if (c->arr[i].tag == tag) {
-			return 1;
+			return &(c->arr[i]);
 		}
 	}
 
-	return 0;
+	return NULL;
 }
 
 void ctx_add_tag(struct ctx *c, size_t tag)
@@ -409,6 +409,26 @@ int ctx_query_dictionary(size_t context_tag, size_t index)
 
 size_t bugs = 0;
 
+int compar_items(const void *l, const void *r)
+{
+	const struct item *li = l;
+	const struct item *ri = r;
+
+	if (li->freq > ri->freq) return -1;
+	if (li->freq < ri->freq) return +1;
+
+	return 0;
+}
+
+void sort_ctx(struct ctx *ctx)
+{
+	qsort(ctx->arr, ctx->items, sizeof(struct item), compar_items);
+
+	if (ctx->items > 1) {
+		assert(ctx->arr[0].freq >= ctx->arr[1].freq);
+	}
+}
+
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context, size_t index)
 {
@@ -424,15 +444,26 @@ void encode_tag(size_t context, size_t index)
 	}
 
 #if 1
-	if (ctx_query_tag(c, dict[index].tag)) {
+	if (ctx_query_tag(c, dict[index].tag) != NULL) {
 		ctx_hit++;
-		stream_size_gr += 1 + log2_sz(c->items); /* hit + index */
+		stream_size_gr += 1 + log2_sz(c->items); /* signal: hit + index */
 		// printf("log2(items) = %zu\n", log2_sz(c->items));
+
+		// increment item->freq
+		struct item *item = ctx_query_tag(c, dict[index].tag);
+		item->freq++;
+
+		// sort ctx
+		sort_ctx(c);
 	} else {
 		ctx_miss++;
-		ctx_add_tag(c, dict[index].tag);
-		stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* miss + index */
+		stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* signal: miss + index */
 		update_model(index);
+
+		ctx_add_tag(c, dict[index].tag);
+
+		// sort ctx
+		sort_ctx(c);
 	}
 #else
 	stream_size_gr += bio_sizeof_gr(opt_k, index); /* +1 due to decision */
