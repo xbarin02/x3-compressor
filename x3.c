@@ -70,13 +70,13 @@ size_t fsize(FILE *stream)
 	return (size_t)end - (size_t)begin;
 }
 
-/* search buffers */
+/* search buffer */
 #define FORWARD_WINDOW (8 * 1024)
 
 /* log. size */
 #define MATCH_LOGSIZE 3
 
-/* the look-ahead buffer */
+/* look-ahead buffer */
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
 
 size_t find_best_match(char *p)
@@ -109,7 +109,7 @@ size_t find_best_match(char *p)
 }
 
 struct elem {
-	char s[MAX_MATCH_LEN * /*HACK*/4]; /* the string */
+	char s[MAX_MATCH_LEN]; /* the string */
 	size_t len; /* of the length */
 	size_t freq; /* that was already used n-times */
 	char *last_pos; /* recently seen at the position */
@@ -522,49 +522,6 @@ void encode_tag(size_t context, size_t context2, size_t index)
 #endif
 }
 
-void add_concatenated_words(size_t context_tag, size_t index)
-{
-	// find context_index
-	size_t context_index = (size_t)-1;
-	for (size_t i = 0; i < elems; ++i) {
-		if (dict[i].tag == context_tag) {
-			context_index = i;
-		}
-	}
-
-	if (context_index == (size_t)-1) {
-		abort();
-	}
-
-	// if len() + len() is too large, return
-	if (dict[context_index].len + dict[index].len > MAX_MATCH_LEN * 4) {
-		printf("not enough space\n");
-		return;
-	}
-
-	// fill struct elem
-	struct elem e;
-
-	memcpy(e.s, dict[context_index].s, dict[context_index].len);
-	memcpy(e.s + dict[context_index].len, dict[index].s, dict[index].len);
-
-	e.len = dict[context_index].len + dict[index].len;
-
-	e.freq = 1;
-
-	e.last_pos = dict[context_index].last_pos;
-
-	// check whether the 'e' is already in the dictionary
-	if (elem_query_dictionary(&e)) {
-		return;
-	}
-
-	// insert new element
-	insert_elem(&e);
-
-	// invoke update_dict()
-}
-
 void compress(char *ptr, size_t size, FILE *rawstream)
 {
 	char *end = ptr + size;
@@ -598,9 +555,7 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			p += len;
 
 			if (p >= ptr + 2) { context2 = (unsigned char)p[-1] | (unsigned char)p[-2]; }
-#if 0
-			add_concatenated_words(context, index);
-#endif
+
 			update_dict(p);
 
 			tag_match_count++;
