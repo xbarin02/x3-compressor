@@ -176,7 +176,7 @@ size_t calc_cost(struct elem *e, char *curr_pos)
 	assert(freq > 0);
 
 	/* cost function to be optimized */
-	size_t cost = /*16*/8 * freq;
+	size_t cost = /*8*/4 * freq;
 
 	if (dist < BACKWARD_WINDOW + MAX_MATCH_LEN + 1) {
 		cost += 1 * (BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist);
