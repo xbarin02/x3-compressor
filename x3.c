@@ -520,6 +520,11 @@ void encode_tag(size_t context, size_t context2, size_t index)
 #endif
 }
 
+size_t make_context2(char *p)
+{
+	return (unsigned char)p[-1] | (unsigned char)p[-2];
+}
+
 void compress(char *ptr, size_t size, FILE *rawstream)
 {
 	char *end = ptr + size;
@@ -551,7 +556,9 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 
 			p += len;
 
-			if (p >= ptr + 2) { context2 = (unsigned char)p[-1] | (unsigned char)p[-2]; }
+			if (p >= ptr + 2) {
+				context2 = make_context2(p);
+			}
 
 			update_dict(p);
 
@@ -580,7 +587,9 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 
 			context = 0;
 
-			if (p >= ptr + 2) { context2 = (unsigned char)p[-1] | (unsigned char)p[-2]; }
+			if (p >= ptr + 2) {
+				context2 = make_context2(p);
+			}
 
 			update_dict(p);
 
