@@ -457,25 +457,18 @@ void encode_tag(size_t context, size_t context2, size_t index)
 		bugs++;
 	}
 
-#if 1
 	if (ctx_query_tag(c, dict[index].tag) != NULL) {
 		ctx_hit++;
 
-#	if 0
-		stream_size_gr += 1 + log2_sz(c->items); /* signal: hit (ctx1) + index */
-#	else
 		if (c->items > 1) {
 			size_t k = get_opt_k(c->symb_sum, c->symb_cnt);
 			size_t item_index = ctx_query_tag_index(c, dict[index].tag);
-			stream_size_gr += 1 + bio_sizeof_gr(k, item_index); /* (1 bit: 1) */
-
+			stream_size_gr += 1 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx1) + index (1 bit: 1) */
 			c->symb_sum += item_index;
 			c->symb_cnt++;
 		} else {
-			stream_size_gr += 1; /* (1 bit: 1) no information needed */
+			stream_size_gr += 1; /* signal: hit (ctx1) + index (1 bit: 1) no information needed */
 		}
-#	endif
-		// printf("log2(items) = %zu\n", log2_sz(c->items));
 
 		// increment item->freq
 		struct item *item = ctx_query_tag(c, dict[index].tag);
@@ -484,34 +477,24 @@ void encode_tag(size_t context, size_t context2, size_t index)
 		// sort ctx
 		sort_ctx(c);
 	} else {
-#if 0
-		ctx_miss++;
-
-		stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* signal: miss + index */
-		update_model(index);
-#else
 		if (ctx_query_tag(c2, dict[index].tag) != NULL) {
 			ctx_hit2++;
-#if 0
-			stream_size_gr += 2 + log2_sz(c2->items); /* signal: hit (ctx2) + index (2 bits: 01) */
-#else
+
 			if (c2->items > 1) {
 				size_t k = get_opt_k(c2->symb_sum, c2->symb_cnt);
 				size_t item_index = ctx_query_tag_index(c2, dict[index].tag);
-				stream_size_gr += 2 + bio_sizeof_gr(k, item_index); /* (2 bits: 01) */
+				stream_size_gr += 2 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx2) + index (2 bits: 01) */
 				c2->symb_sum += item_index;
 				c2->symb_cnt++;
 			} else {
-				stream_size_gr += 2; /* (2 bits: 01) no information needed */
+				stream_size_gr += 2; /* signal: hit (ctx2) + index (2 bits: 01) no information needed */
 			}
-#endif
-			// printf("log2(items) = %zu\n", log2_sz(c2->items));
 		} else {
 			ctx_miss++;
 			stream_size_gr += 3 + bio_sizeof_gr(opt_k, index); /* signal: miss + index (3 bits: 001) */
 			update_model(index);
 		}
-#endif
+
 		ctx_add_tag(c, dict[index].tag);
 
 		// sort ctx
@@ -526,10 +509,6 @@ void encode_tag(size_t context, size_t context2, size_t index)
 		item->freq++;
 		sort_ctx(c2);
 	}
-#else
-	stream_size_gr += bio_sizeof_gr(opt_k, index);
-	update_model(index);
-#endif
 }
 
 size_t make_context2(char *p)
