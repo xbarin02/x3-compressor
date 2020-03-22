@@ -137,6 +137,8 @@ size_t dict_size = 1;
 struct elem *dict = NULL;
 struct ctx *ctx = NULL;
 
+struct ctx ctx2[65536];
+
 /* number of elements */
 size_t elems = 0;
 
@@ -380,6 +382,7 @@ void ctx_add_tag(struct ctx *c, size_t tag)
 
 size_t ctx_miss = 0;
 size_t ctx_hit = 0;
+size_t ctx_hit2 = 0;
 
 int elem_query_dictionary(struct elem *e)
 {
@@ -456,16 +459,14 @@ void sort_ctx(struct ctx *ctx)
 }
 
 /* encode dict[index].tag in context, rather than index */
-void encode_tag(size_t context, size_t index)
+void encode_tag(size_t context, size_t context2, size_t index)
 {
 	assert(ctx != NULL);
 
 	struct ctx *c = ctx + context;
-
-	stream_size_gr += 1; /* decision to use dictionary */
+	struct ctx *c2 = ctx2 + context2;
 
 	if (ctx_query_dictionary(context, index)) {
-		//printf("BUG: found in dictionary\n");
 		bugs++;
 	}
 
@@ -479,12 +480,12 @@ void encode_tag(size_t context, size_t index)
 		if (c->items > 1) {
 			size_t k = get_opt_k(c->symb_sum, c->symb_cnt);
 			size_t item_index = ctx_query_tag_index(c, dict[index].tag);
-			stream_size_gr += 1 + bio_sizeof_gr(k, item_index);
+			stream_size_gr += 1 + bio_sizeof_gr(k, item_index); /* (1 bit: 1) */
 
 			c->symb_sum += item_index;
 			c->symb_cnt++;
 		} else {
-			stream_size_gr += 1; // no information needed
+			stream_size_gr += 1; /* (1 bit: 1) no information needed */
 		}
 #	endif
 		// printf("log2(items) = %zu\n", log2_sz(c->items));
@@ -496,18 +497,36 @@ void encode_tag(size_t context, size_t index)
 		// sort ctx
 		sort_ctx(c);
 	} else {
+#if 0
 		ctx_miss++;
 
 		stream_size_gr += 1 + bio_sizeof_gr(opt_k, index); /* signal: miss + index */
 		update_model(index);
-
+#else
+		if (ctx_query_tag(c2, dict[index].tag) != NULL) {
+			ctx_hit2++;
+			stream_size_gr += 2 + log2_sz(c2->items); /* signal: hit + index (2 bits: 01) */
+		} else {
+			ctx_miss++;
+			stream_size_gr += 3 + bio_sizeof_gr(opt_k, index); /* signal: miss + index (3 bits: 001) */
+			update_model(index);
+		}
+#endif
 		ctx_add_tag(c, dict[index].tag);
 
 		// sort ctx
 		sort_ctx(c);
 	}
+	if (ctx_query_tag(c2, dict[index].tag) == NULL) {
+		ctx_add_tag(c2, dict[index].tag);
+		sort_ctx(c2);
+	} else {
+		struct item *item = ctx_query_tag(c2, dict[index].tag);
+		item->freq++;
+		sort_ctx(c2);
+	}
 #else
-	stream_size_gr += bio_sizeof_gr(opt_k, index); /* +1 due to decision */
+	stream_size_gr += bio_sizeof_gr(opt_k, index);
 	update_model(index);
 #endif
 }
@@ -578,7 +597,7 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
 
-			encode_tag(context, index);
+			encode_tag(context, context2, index);
 
 			context = dict[index].tag;
 
@@ -627,8 +646,8 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 
 			tag_newentry_count++;
 
-			stream_size += 1 + MATCH_LOGSIZE + 8*len;
-			stream_size_raw += 1 + MATCH_LOGSIZE + 8*len;
+			stream_size += 3 + MATCH_LOGSIZE + 8*len; /* 3 bits: 000 */
+			stream_size_raw += 3 + MATCH_LOGSIZE + 8*len; /* 3 bits: 000 */
 			stream_size_raw_str += 8*len;
 		}
 	}
@@ -688,7 +707,7 @@ int main(int argc, char *argv[])
 	printf("uncompressed raw output: %zu\n", stream_size_raw_str/8);
 	printf("ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw)/8));
 
-	printf("contexts: hit=%zu miss=%zu\n", ctx_hit, ctx_miss);
+	printf("contexts: hit=%zu hit2=%zu miss=%zu (new_entry=%zu)\n", ctx_hit, ctx_hit2, ctx_miss, tag_newentry_count);
 	printf("bugs: %zu\n", bugs);
 
 #if 0
