@@ -111,7 +111,6 @@ size_t find_best_match(char *p)
 struct elem {
 	char s[MAX_MATCH_LEN]; /* the string */
 	size_t len; /* of the length */
-	size_t freq; /* that was already used n-times */
 	char *last_pos; /* recently seen at the position */
 	size_t cost; /* sort key */
 	size_t tag; /* id */
@@ -183,7 +182,6 @@ void fill_elem(struct elem *e, char *p, size_t len)
 	memcpy(e->s, p, len);
 	e->len = len;
 
-	e->freq = 1;
 	e->last_pos = p;
 
 	e->cost = calc_cost(e, p);
@@ -549,7 +547,6 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 
 			context = dict[index].tag;
 
-			dict[index].freq++;
 			dict[index].last_pos = p;
 
 			p += len;
@@ -602,7 +599,7 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 void dump_dict()
 {
 	for (size_t i = 0; i < elems; ++i) {
-		printf("dict[%zu] = \"%.*s\" (freq=%zu len=%zu)\n", i, (int)dict[i].len, dict[i].s, dict[i].freq, dict[i].len);
+		printf("dict[%zu] = \"%.*s\" (len=%zu)\n", i, (int)dict[i].len, dict[i].s, dict[i].len);
 	}
 }
 
