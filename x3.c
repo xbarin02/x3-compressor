@@ -5,8 +5,6 @@
 #include <string.h>
 #include <limits.h>
 
-void dump_dict();
-
 size_t popcount_sz(size_t n)
 {
 	switch (sizeof(size_t)) {
@@ -345,7 +343,6 @@ size_t ctx_query_tag_index(struct ctx *c, size_t tag)
 	return (size_t)-1;
 }
 
-
 void ctx_add_tag(struct ctx *c, size_t tag)
 {
 	assert(!ctx_query_tag(c, tag));
@@ -531,10 +528,9 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 		size_t index = find_in_dictionary(p);
 
 		if (index != (size_t)-1 && dict[index].len >= find_best_match(p)) {
-			/* found */
+			/* found in dictionary */
 			size_t len = dict[index].len;
 
-			/* increment freq, recalc all costs, sort */
 #if 0
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
@@ -551,6 +547,7 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 				context2 = make_context2(p);
 			}
 
+			/* recalc all costs, sort */
 			update_dict(p);
 
 			tag_match_count++;
@@ -568,9 +565,7 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			struct elem e;
 			fill_elem(&e, p, len);
 
-			if (elem_query_dictionary(&e)) {
-				printf("BUG: already there\n");
-			}
+			assert(elem_query_dictionary(&e) == 0);
 
 			insert_elem(&e);
 
