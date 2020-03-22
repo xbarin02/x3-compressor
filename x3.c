@@ -132,13 +132,12 @@ struct ctx {
 size_t dict_logsize = 0;
 size_t dict_size = 1;
 
-struct elem *dict = NULL;
-struct ctx *ctx = NULL;
-
-struct ctx ctx2[65536];
-
 /* number of elements */
 size_t elems = 0;
+
+struct elem *dict = NULL;
+struct ctx *ctx = NULL;
+struct ctx ctx2[65536];
 
 void enlarge_dict()
 {
@@ -220,14 +219,9 @@ void insert_elem(const struct elem *e)
 
 	assert(elems < dict_size);
 
-	if (is_zero(&dict[elems])) {
-		dict[elems] = *e;
-		dict[elems].tag = elems; /* element is filled except a tag, set the tag */
-		elems++;
-	} else {
-		printf("WARN rewritting non-zero entry\n");
-		abort();
-	}
+	dict[elems] = *e;
+	dict[elems].tag = elems; /* element is filled except a tag, set the tag */
+	elems++;
 }
 
 size_t find_in_dictionary(const char *p)
@@ -257,8 +251,6 @@ size_t find_in_dictionary(const char *p)
 
 static size_t tag_match_count = 0;
 static size_t tag_newentry_count = 0;
-static size_t stream_size = 0;
-static size_t stream_size_tag = 0;
 static size_t stream_size_raw = 0;
 static size_t stream_size_raw_str = 0;
 
@@ -302,7 +294,9 @@ size_t symbol_sum = 0, symbol_count = 0; /* mean = symbol_sum / symbol_count */
 
 size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
 {
-	if (symb_cnt == 0) return 0;
+	if (symb_cnt == 0) {
+		return 0;
+	}
 
 	int k;
 
@@ -432,8 +426,13 @@ int compar_items(const void *l, const void *r)
 	const struct item *li = l;
 	const struct item *ri = r;
 
-	if (li->freq > ri->freq) return -1;
-	if (li->freq < ri->freq) return +1;
+	if (li->freq > ri->freq) {
+		return -1;
+	}
+
+	if (li->freq < ri->freq) {
+		return +1;
+	}
 
 	return 0;
 }
@@ -506,6 +505,7 @@ void encode_tag(size_t context, size_t context2, size_t index)
 		// sort ctx
 		sort_ctx(c);
 	}
+
 	if (ctx_query_tag(c2, dict[index].tag) == NULL) {
 		ctx_add_tag(c2, dict[index].tag);
 		sort_ctx(c2);
@@ -556,9 +556,6 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			update_dict(p);
 
 			tag_match_count++;
-
-			stream_size += 1 + log2_sz(elems);
-			stream_size_tag += 1 + log2_sz(elems);
 		} else {
 			/* (2) else find best match and insert it into dictionary */
 			size_t len = find_best_match(p);
@@ -589,7 +586,6 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 
 			tag_newentry_count++;
 
-			stream_size += 3 + MATCH_LOGSIZE + 8*len; /* 3 bits: 000 */
 			stream_size_raw += 3 + MATCH_LOGSIZE + 8*len; /* 3 bits: 000 */
 			stream_size_raw_str += 8*len;
 		}
@@ -642,7 +638,7 @@ int main(int argc, char *argv[])
 	printf("tags: match %zu, new entry %zu\n", tag_match_count, tag_newentry_count);
 	printf("input stream: %zu\n", size);
 	printf("est. stream size: %zu (tags %zu / %f%%, uncompressed %zu / %f%%)\n",
-		stream_size/8,
+		(stream_size_gr + stream_size_raw)/8,
 		stream_size_gr/8, 100.f*stream_size_gr/(stream_size_gr + stream_size_raw),
 		stream_size_raw/8, 100.f*stream_size_raw/(stream_size_gr + stream_size_raw)
 	);
