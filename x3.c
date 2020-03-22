@@ -72,7 +72,6 @@ size_t fsize(FILE *stream)
 
 /* search buffers */
 #define FORWARD_WINDOW (8 * 1024)
-#define BACKWARD_WINDOW (FORWARD_WINDOW * 128)
 
 /* log. size */
 #define MATCH_LOGSIZE 3
@@ -172,14 +171,8 @@ size_t calc_cost(struct elem *e, char *curr_pos)
 
 	size_t dist = curr_pos - e->last_pos;
 
-	size_t cost = 0;
-#if 0
-	if (dist < BACKWARD_WINDOW + MAX_MATCH_LEN + 1) {
-		cost += BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist;
-	}
-#else
-	cost = dist;
-#endif
+	size_t cost = dist;
+
 	return cost;
 }
 
@@ -202,11 +195,11 @@ static int cmp(const void *l, const void *r)
 	const struct elem *re = r;
 
 	if (le->cost > re->cost) {
-		return /*-1*/+1;
+		return +1;
 	}
 
 	if (le->cost < re->cost) {
-		return /*+1*/-1;
+		return -1;
 	}
 
 	return 0;
