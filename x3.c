@@ -249,10 +249,11 @@ size_t find_in_dictionary(const char *p)
 	return (size_t)-1; /* not found */
 }
 
-static size_t tag_match_count = 0;
-static size_t tag_newentry_count = 0;
-static size_t stream_size_raw = 0;
-static size_t stream_size_raw_str = 0;
+size_t tag_match_count = 0;
+size_t tag_newentry_count = 0;
+size_t stream_size_raw = 0;
+size_t stream_size_raw_str = 0;
+size_t stream_size_gr = 0;
 
 void update_dict(char *p)
 {
@@ -272,8 +273,6 @@ void update_dict(char *p)
 		assert(dict[elems-2].cost <= dict[elems-1].cost);
 	}
 }
-
-size_t stream_size_gr = 0;
 
 size_t bio_sizeof_gr(size_t k, size_t N)
 {
