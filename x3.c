@@ -171,17 +171,15 @@ size_t calc_cost(struct elem *e, char *curr_pos)
 	assert(curr_pos >= e->last_pos);
 
 	size_t dist = curr_pos - e->last_pos;
-	size_t freq = e->freq;
 
-	assert(freq > 0);
-
-	/* cost function to be optimized */
-	size_t cost = 0 * freq;
-
+	size_t cost = 0;
+#if 0
 	if (dist < BACKWARD_WINDOW + MAX_MATCH_LEN + 1) {
-		cost += 1 * (BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist);
+		cost += BACKWARD_WINDOW + MAX_MATCH_LEN + 1 - dist;
 	}
-
+#else
+	cost = dist;
+#endif
 	return cost;
 }
 
@@ -204,11 +202,11 @@ static int cmp(const void *l, const void *r)
 	const struct elem *re = r;
 
 	if (le->cost > re->cost) {
-		return -1;
+		return /*-1*/+1;
 	}
 
 	if (le->cost < re->cost) {
-		return +1;
+		return /*+1*/-1;
 	}
 
 	return 0;
@@ -287,8 +285,8 @@ void update_dict(char *p)
 	qsort(dict, elems, sizeof(struct elem), cmp);
 
 	if (elems >= 2) {
-		assert(dict[0].cost >= dict[1].cost);
-		assert(dict[elems-2].cost >= dict[elems-1].cost);
+		assert(dict[0].cost <= dict[1].cost);
+		assert(dict[elems-2].cost <= dict[elems-1].cost);
 	}
 }
 
