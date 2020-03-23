@@ -5,39 +5,6 @@
 #include <string.h>
 #include <limits.h>
 
-void fload(void *ptr, size_t size, FILE *stream)
-{
-	if (fread(ptr, 1, size, stream) < size) {
-		abort();
-	}
-}
-
-size_t fsize(FILE *stream)
-{
-	long begin = ftell(stream);
-
-	if (begin == (long)-1) {
-		fprintf(stderr, "Stream is not seekable\n");
-		abort();
-	}
-
-	if (fseek(stream, 0, SEEK_END)) {
-		abort();
-	}
-
-	long end = ftell(stream);
-
-	if (end == (long)-1) {
-		abort();
-	}
-
-	if (fseek(stream, begin, SEEK_SET)) {
-		abort();
-	}
-
-	return (size_t)end - (size_t)begin;
-}
-
 /* search buffer */
 #define FORWARD_WINDOW (8 * 1024)
 
@@ -50,33 +17,8 @@ size_t fsize(FILE *stream)
 /* found empirically */
 #define TCOUNT 10
 
-size_t find_best_match(char *p)
-{
-	char *end = p + FORWARD_WINDOW;
-
-	for (int tc = TCOUNT; tc > 0; --tc) {
-		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
-			/* trying match string of the length 'len' chars */
-			int count = 0;
-
-			/* start matching at 's' */
-			for (char *s = p + len; s < end - len; ) {
-				if (memcmp(p, s, len) == 0) {
-					count++;
-					s += len;
-				} else {
-					s++;
-				}
-			}
-
-			if (count > tc) {
-				return len;
-			}
-		}
-	}
-
-	return 1;
-}
+/* recompute Golomb-Rice codes after... */
+#define RESET_INTERVAL 256
 
 struct elem {
 	char s[MAX_MATCH_LEN]; /* the string */
@@ -116,6 +58,78 @@ struct elem *dict = NULL;
 struct ctx *ctx1 = NULL;
 struct ctx ctx2[65536];
 
+struct gr gr_dict;
+
+size_t tag_match_count = 0;
+size_t tag_newentry_count = 0;
+size_t stream_size_raw = 0;
+size_t stream_size_raw_str = 0;
+size_t stream_size_gr = 0;
+size_t ctx_miss = 0;
+size_t ctx1_hit = 0;
+size_t ctx2_hit = 0;
+
+void fload(void *ptr, size_t size, FILE *stream)
+{
+	if (fread(ptr, 1, size, stream) < size) {
+		abort();
+	}
+}
+
+size_t fsize(FILE *stream)
+{
+	long begin = ftell(stream);
+
+	if (begin == (long)-1) {
+		fprintf(stderr, "Stream is not seekable\n");
+		abort();
+	}
+
+	if (fseek(stream, 0, SEEK_END)) {
+		abort();
+	}
+
+	long end = ftell(stream);
+
+	if (end == (long)-1) {
+		abort();
+	}
+
+	if (fseek(stream, begin, SEEK_SET)) {
+		abort();
+	}
+
+	return (size_t)end - (size_t)begin;
+}
+
+size_t find_best_match(char *p)
+{
+	char *end = p + FORWARD_WINDOW;
+
+	for (int tc = TCOUNT; tc > 0; --tc) {
+		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
+			/* trying match string of the length 'len' chars */
+			int count = 0;
+
+			/* start matching at 's' */
+			for (char *s = p + len; s < end - len; ) {
+				if (memcmp(p, s, len) == 0) {
+					count++;
+					s += len;
+				} else {
+					s++;
+				}
+			}
+
+			if (count > tc) {
+				return len;
+			}
+		}
+	}
+
+	return 1;
+}
+
 void gr_init(struct gr *gr, size_t k)
 {
 	gr->opt_k = k;
@@ -133,8 +147,6 @@ void enlarge_dict()
 	if (dict == NULL) {
 		abort();
 	}
-
-	// memset(dict + elems, 0, (dict_size - elems) * sizeof(struct elem));
 
 	ctx1 = realloc(ctx1, dict_size * sizeof(struct ctx));
 
@@ -237,12 +249,6 @@ size_t find_in_dictionary(const char *p)
 	return (size_t)-1; /* not found */
 }
 
-size_t tag_match_count = 0;
-size_t tag_newentry_count = 0;
-size_t stream_size_raw = 0;
-size_t stream_size_raw_str = 0;
-size_t stream_size_gr = 0;
-
 void update_dict(char *p)
 {
 	struct elem e0;
@@ -273,10 +279,6 @@ size_t bio_sizeof_gr(size_t k, size_t N)
 
 	return size;
 }
-
-#define RESET_INTERVAL 256 /* recompute Golomb-Rice codes after... */
-
-struct gr gr_dict;
 
 size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
 {
@@ -351,10 +353,6 @@ void ctx_add_tag(struct ctx *c, size_t tag)
 	c->arr[c->items - 1].tag = tag;
 	c->arr[c->items - 1].freq = 1;
 }
-
-size_t ctx_miss = 0;
-size_t ctx1_hit = 0;
-size_t ctx2_hit = 0;
 
 int elem_query_dictionary(struct elem *e)
 {
@@ -479,9 +477,6 @@ void compress(char *ptr, size_t size)
 	}
 
 	for (char *p = ptr; p < end; ) {
-#if 0
-		printf("find %p / %p\n", p, end);
-#endif
 		/* (1) look into dictionary */
 		size_t index = find_in_dictionary(p);
 
