@@ -91,11 +91,18 @@ struct item {
 	size_t freq; /* used n-times */
 };
 
+struct gr {
+	size_t opt_k;
+	/* mean = symb_sum / symb_count */
+	size_t symb_sum;
+	size_t symb_cnt;
+};
+
 struct ctx {
 	size_t items; /* allocated elements */
 	struct item *arr; /* pointer to the first item */
 
-	size_t symb_sum, symb_cnt; /* due to Golomb-Rice coding */
+	struct gr gr;
 };
 
 /* allocated size, enlarged logarithmically */
@@ -108,6 +115,13 @@ size_t elems = 0;
 struct elem *dict = NULL;
 struct ctx *ctx1 = NULL;
 struct ctx ctx2[65536];
+
+void gr_init(struct gr *gr, size_t k)
+{
+	gr->opt_k = k;
+	gr->symb_sum = 0;
+	gr->symb_cnt = 0;
+}
 
 void enlarge_dict()
 {
@@ -129,6 +143,10 @@ void enlarge_dict()
 	}
 
 	memset(ctx1 + elems, 0, (dict_size - elems) * sizeof(struct ctx));
+
+	for (size_t e = elems; e < dict_size; ++e) {
+		gr_init(&ctx1[e].gr, 0);
+	}
 }
 
 size_t calc_cost(struct elem *e, char *curr_pos)
@@ -254,20 +272,6 @@ size_t bio_sizeof_gr(size_t k, size_t N)
 	size += k;
 
 	return size;
-}
-
-struct gr {
-	size_t opt_k;
-	/* mean = symb_sum / symb_count */
-	size_t symb_sum;
-	size_t symb_cnt;
-};
-
-void gr_init(struct gr *gr, size_t k)
-{
-	gr->opt_k = k;
-	gr->symb_sum = 0;
-	gr->symb_cnt = 0;
 }
 
 #define RESET_INTERVAL 256 /* recompute Golomb-Rice codes after... */
@@ -410,11 +414,10 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		ctx1_hit++;
 
 		if (c1->items > 1) {
-			size_t k = get_opt_k(c1->symb_sum, c1->symb_cnt);
+			size_t k = get_opt_k(c1->gr.symb_sum, c1->gr.symb_cnt);
 			size_t item_index = ctx_query_tag_index(c1, tag);
 			stream_size_gr += 1 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx1) + index (1 bit: 1) */
-			c1->symb_sum += item_index;
-			c1->symb_cnt++;
+			gr_update(&c1->gr, item_index);
 		} else {
 			stream_size_gr += 1; /* signal: hit (ctx1) + index (1 bit: 1) no information needed */
 		}
@@ -429,11 +432,10 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 			ctx2_hit++;
 
 			if (c2->items > 1) {
-				size_t k = get_opt_k(c2->symb_sum, c2->symb_cnt);
+				size_t k = get_opt_k(c2->gr.symb_sum, c2->gr.symb_cnt);
 				size_t item_index = ctx_query_tag_index(c2, tag);
 				stream_size_gr += 2 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx2) + index (2 bits: 01) */
-				c2->symb_sum += item_index;
-				c2->symb_cnt++;
+				gr_update(&c2->gr, item_index);
 			} else {
 				stream_size_gr += 2; /* signal: hit (ctx2) + index (2 bits: 01) no information needed */
 			}
@@ -471,6 +473,10 @@ void compress(char *ptr, size_t size)
 	size_t context2 = 0; /* last two bytes */
 
 	gr_init(&gr_dict, 11);
+
+	for (size_t e = 0; e < 65536; ++e) {
+		gr_init(&ctx2[e].gr, 0);
+	}
 
 	for (char *p = ptr; p < end; ) {
 #if 0
