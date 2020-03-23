@@ -375,12 +375,14 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	struct ctx *c1 = ctx1 + context1;
 	struct ctx *c2 = ctx2 + context2;
 
-	if (ctx_query_tag(c1, dict[index].tag) != NULL) {
+	size_t tag = dict[index].tag;
+
+	if (ctx_query_tag(c1, tag) != NULL) {
 		ctx1_hit++;
 
 		if (c1->items > 1) {
 			size_t k = get_opt_k(c1->symb_sum, c1->symb_cnt);
-			size_t item_index = ctx_query_tag_index(c1, dict[index].tag);
+			size_t item_index = ctx_query_tag_index(c1, tag);
 			stream_size_gr += 1 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx1) + index (1 bit: 1) */
 			c1->symb_sum += item_index;
 			c1->symb_cnt++;
@@ -389,18 +391,18 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		}
 
 		// increment item->freq
-		struct item *item = ctx_query_tag(c1, dict[index].tag);
+		struct item *item = ctx_query_tag(c1, tag);
 		item->freq++;
 
 		// sort ctx
 		sort_ctx(c1);
 	} else {
-		if (ctx_query_tag(c2, dict[index].tag) != NULL) {
+		if (ctx_query_tag(c2, tag) != NULL) {
 			ctx2_hit++;
 
 			if (c2->items > 1) {
 				size_t k = get_opt_k(c2->symb_sum, c2->symb_cnt);
-				size_t item_index = ctx_query_tag_index(c2, dict[index].tag);
+				size_t item_index = ctx_query_tag_index(c2, tag);
 				stream_size_gr += 2 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx2) + index (2 bits: 01) */
 				c2->symb_sum += item_index;
 				c2->symb_cnt++;
@@ -413,17 +415,17 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 			update_model(index);
 		}
 
-		ctx_add_tag(c1, dict[index].tag);
+		ctx_add_tag(c1, tag);
 
 		// sort ctx
 		sort_ctx(c1);
 	}
 
-	if (ctx_query_tag(c2, dict[index].tag) == NULL) {
-		ctx_add_tag(c2, dict[index].tag);
+	if (ctx_query_tag(c2, tag) == NULL) {
+		ctx_add_tag(c2, tag);
 		sort_ctx(c2);
 	} else {
-		struct item *item = ctx_query_tag(c2, dict[index].tag);
+		struct item *item = ctx_query_tag(c2, tag);
 		item->freq++;
 		sort_ctx(c2);
 	}
