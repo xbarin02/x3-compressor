@@ -5,36 +5,6 @@
 #include <string.h>
 #include <limits.h>
 
-size_t popcount_sz(size_t n)
-{
-	switch (sizeof(size_t)) {
-		case sizeof(unsigned int): return __builtin_popcount(n);
-		case sizeof(unsigned long): return __builtin_popcountl(n);
-		default: __builtin_trap();
-	}
-}
-
-size_t copymsb_sz(size_t n)
-{
-	size_t shift = 1;
-
-	while (shift < sizeof(size_t) * CHAR_BIT) {
-		n |= n >> shift;
-		shift <<= 1;
-	}
-
-	return n;
-}
-
-size_t log2_sz(size_t n)
-{
-	--n;
-
-	n = copymsb_sz(n);
-
-	return popcount_sz(n);
-}
-
 void fload(void *ptr, size_t size, FILE *stream)
 {
 	if (fread(ptr, 1, size, stream) < size) {
@@ -77,12 +47,14 @@ size_t fsize(FILE *stream)
 /* look-ahead buffer */
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
 
+/* found empirically */
+#define TCOUNT 10
+
 size_t find_best_match(char *p)
 {
 	char *end = p + FORWARD_WINDOW;
 
-	/* tc = 10 found empirically */
-	for (int tc = 10; tc > 0; --tc) {
+	for (int tc = TCOUNT; tc > 0; --tc) {
 		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
 			/* trying match string of the length 'len' chars */
 			int count = 0;
@@ -369,47 +341,6 @@ int elem_query_dictionary(struct elem *e)
 	return 0;
 }
 
-/* check whether context+index is present in the dictionary (is should not) */
-int ctx_query_dictionary(size_t context_tag, size_t index)
-{
-	size_t context_index = (size_t)-1;
-	for (size_t i = 0; i < elems; ++i) {
-		if (dict[i].tag == context_tag) {
-			context_index = i;
-		}
-	}
-
-	if (context_index == (size_t)-1) {
-		abort();
-	}
-
-	// now we have a pair (context_index, index)
-
-	// helper struct
-	struct elem e;
-
-	memcpy(e.s, dict[context_index].s, dict[context_index].len);
-	memcpy(e.s + dict[context_index].len, dict[index].s, dict[index].len);
-
-	e.len = dict[context_index].len + dict[index].len;
-
-	// for each item in dictionary
-	for (size_t i = 0; i < elems; ++i) {
-		if (dict[i].len == e.len && memcmp(dict[i].s, e.s, e.len) == 0) {
-#if 0
-			printf("DEBUG: %.*s + %.*s == %.*s\n",
-				dict[context_index].len, dict[context_index].s,
-				dict[index].len, dict[index].s,
-				dict[i].len, dict[i].s
-			);
-#endif
-			return 1; /* found :( */
-		}
-	}
-
-	return 0;
-}
-
 int compar_items(const void *l, const void *r)
 {
 	const struct item *li = l;
@@ -443,13 +374,6 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 
 	struct ctx *c1 = ctx1 + context1;
 	struct ctx *c2 = ctx2 + context2;
-
-#if 0
-	/* this is iff context1 == 0 */
-	if (ctx_query_dictionary(context1, index)) {
-		bugs++;
-	}
-#endif
 
 	if (ctx_query_tag(c1, dict[index].tag) != NULL) {
 		ctx1_hit++;
