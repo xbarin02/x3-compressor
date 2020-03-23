@@ -134,7 +134,7 @@ size_t dict_size = 1;
 size_t elems = 0;
 
 struct elem *dict = NULL;
-struct ctx *ctx = NULL;
+struct ctx *ctx1 = NULL;
 struct ctx ctx2[65536];
 
 void enlarge_dict()
@@ -150,13 +150,13 @@ void enlarge_dict()
 
 	memset(dict + elems, 0, (dict_size - elems) * sizeof(struct elem));
 
-	ctx = realloc(ctx, dict_size * sizeof(struct ctx));
+	ctx1 = realloc(ctx1, dict_size * sizeof(struct ctx));
 
-	if (ctx == NULL) {
+	if (ctx1 == NULL) {
 		abort();
 	}
 
-	memset(ctx + elems, 0, (dict_size - elems) * sizeof(struct ctx));
+	memset(ctx1 + elems, 0, (dict_size - elems) * sizeof(struct ctx));
 }
 
 size_t calc_cost(struct elem *e, char *curr_pos)
@@ -445,9 +445,9 @@ void sort_ctx(struct ctx *ctx)
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context1, size_t context2, size_t index)
 {
-	assert(ctx != NULL);
+	assert(ctx1 != NULL);
 
-	struct ctx *c1 = ctx + context1;
+	struct ctx *c1 = ctx1 + context1;
 	struct ctx *c2 = ctx2 + context2;
 
 	if (ctx_query_dictionary(context1, index)) {
@@ -518,7 +518,7 @@ void compress(char *ptr, size_t size)
 	char *end = ptr + size;
 
 	size_t context1 = 0; /* last tag */
-	size_t context2 = 0;
+	size_t context2 = 0; /* last two bytes */
 
 	for (char *p = ptr; p < end; ) {
 #if 0
