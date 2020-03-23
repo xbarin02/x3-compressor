@@ -429,26 +429,22 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		ctx1_hit++;
 
 		stream_size_gr += 1 + ctx_encode_tag(c1, tag); /* signal: hit (ctx1) + index (1 bit: 1) */
+	} else if (ctx_query_tag(c2, tag) != NULL) {
+		ctx2_hit++;
 
-		// increment item->freq
-		ctx_item_inc_freq(c1, tag);
+		stream_size_gr += 2 + ctx_encode_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
+	} else {
+		ctx_miss++;
 
-		// sort ctx
+		stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
+		update_model(index);
+	}
+
+	if (ctx_query_tag(c1, tag) == NULL) {
+		ctx_add_tag(c1, tag);
 		ctx_sort(c1);
 	} else {
-		if (ctx_query_tag(c2, tag) != NULL) {
-			ctx2_hit++;
-
-			stream_size_gr += 2 + ctx_encode_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
-		} else {
-			ctx_miss++;
-			stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
-			update_model(index);
-		}
-
-		ctx_add_tag(c1, tag);
-
-		// sort ctx
+		ctx_item_inc_freq(c1, tag);
 		ctx_sort(c1);
 	}
 
