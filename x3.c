@@ -256,10 +256,23 @@ size_t bio_sizeof_gr(size_t k, size_t N)
 	return size;
 }
 
+struct gr {
+	size_t opt_k;
+	/* mean = symb_sum / symb_count */
+	size_t symb_sum;
+	size_t symb_cnt;
+};
+
+void gr_init(struct gr *gr, size_t k)
+{
+	gr->opt_k = k;
+	gr->symb_sum = 0;
+	gr->symb_cnt = 0;
+}
+
 #define RESET_INTERVAL 256 /* recompute Golomb-Rice codes after... */
 
-size_t opt_k = 11;
-size_t symbol_sum = 0, symbol_count = 0; /* mean = symbol_sum / symbol_count */
+struct gr gr_dict;
 
 size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
 {
@@ -275,17 +288,26 @@ size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
 	return (size_t)(k - 1);
 }
 
+void gr_recalc_k(struct gr *gr)
+{
+	gr->opt_k = get_opt_k(gr->symb_sum, gr->symb_cnt);
+}
+
+void gr_update(struct gr *gr, size_t symb)
+{
+	gr->symb_sum += symb;
+	gr->symb_cnt++;
+}
+
 void update_model(size_t delta)
 {
-	if (symbol_count == RESET_INTERVAL) {
-		opt_k = get_opt_k(symbol_sum, symbol_count);
+	if (gr_dict.symb_cnt == RESET_INTERVAL) {
+		gr_recalc_k(&gr_dict);
 
-		symbol_count = 0;
-		symbol_sum = 0;
+		gr_init(&gr_dict, gr_dict.opt_k);
 	}
 
-	symbol_sum += delta;
-	symbol_count++;
+	gr_update(&gr_dict, delta);
 }
 
 struct item *ctx_query_tag(struct ctx *c, size_t tag)
@@ -417,7 +439,7 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 			}
 		} else {
 			ctx_miss++;
-			stream_size_gr += 3 + bio_sizeof_gr(opt_k, index); /* signal: miss + index (3 bits: 001) */
+			stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
 			update_model(index);
 		}
 
@@ -447,6 +469,8 @@ void compress(char *ptr, size_t size)
 
 	size_t context1 = 0; /* last tag */
 	size_t context2 = 0; /* last two bytes */
+
+	gr_init(&gr_dict, 11);
 
 	for (char *p = ptr; p < end; ) {
 #if 0
