@@ -398,6 +398,23 @@ void ctx_item_inc_freq(struct ctx *ctx, size_t tag)
 	item->freq++;
 }
 
+/* returns number of bits produced */
+size_t ctx_encode_tag(struct ctx *ctx, size_t tag)
+{
+	size_t size = 0;
+
+	if (ctx->items > 1) {
+		gr_recalc_k(&ctx->gr);
+		size_t item_index = ctx_query_tag_index(ctx, tag);
+		size += bio_sizeof_gr(ctx->gr.opt_k, item_index);
+		gr_update(&ctx->gr, item_index);
+	} else {
+		size += 0; /* no information needed */
+	}
+
+	return size;
+}
+
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context1, size_t context2, size_t index)
 {
@@ -411,14 +428,7 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	if (ctx_query_tag(c1, tag) != NULL) {
 		ctx1_hit++;
 
-		if (c1->items > 1) {
-			gr_recalc_k(&c1->gr);
-			size_t item_index = ctx_query_tag_index(c1, tag);
-			stream_size_gr += 1 + bio_sizeof_gr(c1->gr.opt_k, item_index); /* signal: hit (ctx1) + index (1 bit: 1) */
-			gr_update(&c1->gr, item_index);
-		} else {
-			stream_size_gr += 1; /* signal: hit (ctx1) + index (1 bit: 1) no information needed */
-		}
+		stream_size_gr += 1 + ctx_encode_tag(c1, tag); /* signal: hit (ctx1) + index (1 bit: 1) */
 
 		// increment item->freq
 		ctx_item_inc_freq(c1, tag);
@@ -429,14 +439,7 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		if (ctx_query_tag(c2, tag) != NULL) {
 			ctx2_hit++;
 
-			if (c2->items > 1) {
-				gr_recalc_k(&c2->gr);
-				size_t item_index = ctx_query_tag_index(c2, tag);
-				stream_size_gr += 2 + bio_sizeof_gr(c2->gr.opt_k, item_index); /* signal: hit (ctx2) + index (2 bits: 01) */
-				gr_update(&c2->gr, item_index);
-			} else {
-				stream_size_gr += 2; /* signal: hit (ctx2) + index (2 bits: 01) no information needed */
-			}
+			stream_size_gr += 2 + ctx_encode_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
 		} else {
 			ctx_miss++;
 			stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
