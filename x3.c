@@ -414,9 +414,9 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		ctx1_hit++;
 
 		if (c1->items > 1) {
-			size_t k = get_opt_k(c1->gr.symb_sum, c1->gr.symb_cnt);
+			gr_recalc_k(&c1->gr);
 			size_t item_index = ctx_query_tag_index(c1, tag);
-			stream_size_gr += 1 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx1) + index (1 bit: 1) */
+			stream_size_gr += 1 + bio_sizeof_gr(c1->gr.opt_k, item_index); /* signal: hit (ctx1) + index (1 bit: 1) */
 			gr_update(&c1->gr, item_index);
 		} else {
 			stream_size_gr += 1; /* signal: hit (ctx1) + index (1 bit: 1) no information needed */
@@ -432,9 +432,9 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 			ctx2_hit++;
 
 			if (c2->items > 1) {
-				size_t k = get_opt_k(c2->gr.symb_sum, c2->gr.symb_cnt);
+				gr_recalc_k(&c2->gr);
 				size_t item_index = ctx_query_tag_index(c2, tag);
-				stream_size_gr += 2 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx2) + index (2 bits: 01) */
+				stream_size_gr += 2 + bio_sizeof_gr(c2->gr.opt_k, item_index); /* signal: hit (ctx2) + index (2 bits: 01) */
 				gr_update(&c2->gr, item_index);
 			} else {
 				stream_size_gr += 2; /* signal: hit (ctx2) + index (2 bits: 01) no information needed */
