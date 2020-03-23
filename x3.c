@@ -360,8 +360,8 @@ void ctx_add_tag(struct ctx *c, size_t tag)
 }
 
 size_t ctx_miss = 0;
-size_t ctx_hit = 0;
-size_t ctx_hit2 = 0;
+size_t ctx1_hit = 0;
+size_t ctx2_hit = 0;
 
 int elem_query_dictionary(struct elem *e)
 {
@@ -455,7 +455,7 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	}
 
 	if (ctx_query_tag(c1, dict[index].tag) != NULL) {
-		ctx_hit++;
+		ctx1_hit++;
 
 		if (c1->items > 1) {
 			size_t k = get_opt_k(c1->symb_sum, c1->symb_cnt);
@@ -475,7 +475,7 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		sort_ctx(c1);
 	} else {
 		if (ctx_query_tag(c2, dict[index].tag) != NULL) {
-			ctx_hit2++;
+			ctx2_hit++;
 
 			if (c2->items > 1) {
 				size_t k = get_opt_k(c2->symb_sum, c2->symb_cnt);
@@ -635,7 +635,7 @@ int main(int argc, char *argv[])
 	printf("uncompressed raw output: %zu\n", stream_size_raw_str/8);
 	printf("ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw)/8));
 
-	printf("contexts: hit=%zu hit2=%zu miss=%zu (new_entry=%zu)\n", ctx_hit, ctx_hit2, ctx_miss, tag_newentry_count);
+	printf("contexts: hit1=%zu hit2=%zu miss=%zu new_entry=%zu\n", ctx1_hit, ctx2_hit, ctx_miss, tag_newentry_count);
 	printf("bugs: %zu\n", bugs);
 
 #if 0
