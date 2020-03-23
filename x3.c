@@ -443,36 +443,36 @@ void sort_ctx(struct ctx *ctx)
 }
 
 /* encode dict[index].tag in context, rather than index */
-void encode_tag(size_t context, size_t context2, size_t index)
+void encode_tag(size_t context1, size_t context2, size_t index)
 {
 	assert(ctx != NULL);
 
-	struct ctx *c = ctx + context;
+	struct ctx *c1 = ctx + context1;
 	struct ctx *c2 = ctx2 + context2;
 
-	if (ctx_query_dictionary(context, index)) {
+	if (ctx_query_dictionary(context1, index)) {
 		bugs++;
 	}
 
-	if (ctx_query_tag(c, dict[index].tag) != NULL) {
+	if (ctx_query_tag(c1, dict[index].tag) != NULL) {
 		ctx_hit++;
 
-		if (c->items > 1) {
-			size_t k = get_opt_k(c->symb_sum, c->symb_cnt);
-			size_t item_index = ctx_query_tag_index(c, dict[index].tag);
+		if (c1->items > 1) {
+			size_t k = get_opt_k(c1->symb_sum, c1->symb_cnt);
+			size_t item_index = ctx_query_tag_index(c1, dict[index].tag);
 			stream_size_gr += 1 + bio_sizeof_gr(k, item_index); /* signal: hit (ctx1) + index (1 bit: 1) */
-			c->symb_sum += item_index;
-			c->symb_cnt++;
+			c1->symb_sum += item_index;
+			c1->symb_cnt++;
 		} else {
 			stream_size_gr += 1; /* signal: hit (ctx1) + index (1 bit: 1) no information needed */
 		}
 
 		// increment item->freq
-		struct item *item = ctx_query_tag(c, dict[index].tag);
+		struct item *item = ctx_query_tag(c1, dict[index].tag);
 		item->freq++;
 
 		// sort ctx
-		sort_ctx(c);
+		sort_ctx(c1);
 	} else {
 		if (ctx_query_tag(c2, dict[index].tag) != NULL) {
 			ctx_hit2++;
@@ -492,10 +492,10 @@ void encode_tag(size_t context, size_t context2, size_t index)
 			update_model(index);
 		}
 
-		ctx_add_tag(c, dict[index].tag);
+		ctx_add_tag(c1, dict[index].tag);
 
 		// sort ctx
-		sort_ctx(c);
+		sort_ctx(c1);
 	}
 
 	if (ctx_query_tag(c2, dict[index].tag) == NULL) {
@@ -513,11 +513,11 @@ size_t make_context2(char *p)
 	return (unsigned char)p[-1] | (unsigned char)p[-2];
 }
 
-void compress(char *ptr, size_t size, FILE *rawstream)
+void compress(char *ptr, size_t size)
 {
 	char *end = ptr + size;
 
-	size_t context = 0; /* last tag */
+	size_t context1 = 0; /* last tag */
 	size_t context2 = 0;
 
 	for (char *p = ptr; p < end; ) {
@@ -535,9 +535,9 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
 
-			encode_tag(context, context2, index);
+			encode_tag(context1, context2, index);
 
-			context = dict[index].tag;
+			context1 = dict[index].tag;
 
 			dict[index].last_pos = p;
 
@@ -558,9 +558,11 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 			printf("[DEBUG] new match len %zu\n", len);
 #endif
 
+#if 0
 			if (fwrite(p, len, 1, rawstream) < 1) {
 				abort();
 			}
+#endif
 
 			struct elem e;
 			fill_elem(&e, p, len);
@@ -571,7 +573,7 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 
 			p += len;
 
-			context = 0;
+			context1 = 0;
 
 			if (p >= ptr + 2) {
 				context2 = make_context2(p);
@@ -581,8 +583,8 @@ void compress(char *ptr, size_t size, FILE *rawstream)
 
 			tag_newentry_count++;
 
-			stream_size_raw += 3 + MATCH_LOGSIZE + 8*len; /* 3 bits: 000 */
-			stream_size_raw_str += 8*len;
+			stream_size_raw += 3 + MATCH_LOGSIZE + 8 * len; /* 3 bits: 000 */
+			stream_size_raw_str += 8 * len;
 		}
 	}
 }
@@ -606,12 +608,6 @@ int main(int argc, char *argv[])
 		abort();
 	}
 
-	FILE *rawstream = fopen("stream2", "w");
-
-	if (rawstream == NULL) {
-		abort();
-	}
-
 	size_t size = fsize(stream);
 
 	char *ptr = malloc(size + FORWARD_WINDOW);
@@ -626,9 +622,7 @@ int main(int argc, char *argv[])
 
 	enlarge_dict();
 
-	compress(ptr, size, rawstream);
-
-	fclose(rawstream);
+	compress(ptr, size);
 
 	printf("tags: match %zu, new entry %zu\n", tag_match_count, tag_newentry_count);
 	printf("input stream: %zu\n", size);
