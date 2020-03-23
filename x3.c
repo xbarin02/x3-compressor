@@ -410,8 +410,6 @@ int ctx_query_dictionary(size_t context_tag, size_t index)
 	return 0;
 }
 
-size_t bugs = 0;
-
 int compar_items(const void *l, const void *r)
 {
 	const struct item *li = l;
@@ -446,9 +444,12 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	struct ctx *c1 = ctx1 + context1;
 	struct ctx *c2 = ctx2 + context2;
 
+#if 0
+	/* this is iff context1 == 0 */
 	if (ctx_query_dictionary(context1, index)) {
 		bugs++;
 	}
+#endif
 
 	if (ctx_query_tag(c1, dict[index].tag) != NULL) {
 		ctx1_hit++;
@@ -632,7 +633,6 @@ int main(int argc, char *argv[])
 	printf("ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw)/8));
 
 	printf("contexts: hit1=%zu hit2=%zu miss=%zu new_entry=%zu\n", ctx1_hit, ctx2_hit, ctx_miss, tag_newentry_count);
-	printf("bugs: %zu\n", bugs);
 
 #if 0
 	dump_dict();
