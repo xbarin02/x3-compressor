@@ -148,7 +148,7 @@ void enlarge_dict()
 		abort();
 	}
 
-	memset(dict + elems, 0, (dict_size - elems) * sizeof(struct elem));
+	// memset(dict + elems, 0, (dict_size - elems) * sizeof(struct elem));
 
 	ctx1 = realloc(ctx1, dict_size * sizeof(struct ctx));
 
@@ -303,7 +303,7 @@ size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
 	return (size_t)(k - 1);
 }
 
-static void update_model(size_t delta)
+void update_model(size_t delta)
 {
 	if (symbol_count == RESET_INTERVAL) {
 		opt_k = get_opt_k(symbol_sum, symbol_count);
@@ -428,6 +428,7 @@ int compar_items(const void *l, const void *r)
 	return 0;
 }
 
+/* sort ctx->items[] according to item.freq */
 void sort_ctx(struct ctx *ctx)
 {
 	qsort(ctx->arr, ctx->items, sizeof(struct item), compar_items);
