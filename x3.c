@@ -358,13 +358,20 @@ int compar_items(const void *l, const void *r)
 }
 
 /* sort ctx->items[] according to item.freq */
-void sort_ctx(struct ctx *ctx)
+void ctx_sort(struct ctx *ctx)
 {
 	qsort(ctx->arr, ctx->items, sizeof(struct item), compar_items);
 
 	if (ctx->items > 1) {
 		assert(ctx->arr[0].freq >= ctx->arr[1].freq);
 	}
+}
+
+void ctx_item_inc_freq(struct ctx *ctx, size_t tag)
+{
+	struct item *item = ctx_query_tag(ctx, tag);
+
+	item->freq++;
 }
 
 /* encode dict[index].tag in context, rather than index */
@@ -391,11 +398,12 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		}
 
 		// increment item->freq
-		struct item *item = ctx_query_tag(c1, tag);
-		item->freq++;
+		/*struct item *item = ctx_query_tag(c1, tag);
+		item->freq++;*/
+		ctx_item_inc_freq(c1, tag);
 
 		// sort ctx
-		sort_ctx(c1);
+		ctx_sort(c1);
 	} else {
 		if (ctx_query_tag(c2, tag) != NULL) {
 			ctx2_hit++;
@@ -418,16 +426,16 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		ctx_add_tag(c1, tag);
 
 		// sort ctx
-		sort_ctx(c1);
+		ctx_sort(c1);
 	}
 
 	if (ctx_query_tag(c2, tag) == NULL) {
 		ctx_add_tag(c2, tag);
-		sort_ctx(c2);
+		ctx_sort(c2);
 	} else {
 		struct item *item = ctx_query_tag(c2, tag);
 		item->freq++;
-		sort_ctx(c2);
+		ctx_sort(c2);
 	}
 }
 
