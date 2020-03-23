@@ -65,6 +65,9 @@ size_t tag_newentry_count = 0;
 size_t stream_size_raw = 0;
 size_t stream_size_raw_str = 0;
 size_t stream_size_gr = 0;
+size_t stream_size_gr_hit1 = 0;
+size_t stream_size_gr_hit2 = 0;
+size_t stream_size_gr_miss = 0;
 size_t ctx_miss = 0;
 size_t ctx1_hit = 0;
 size_t ctx2_hit = 0;
@@ -429,14 +432,17 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		ctx1_hit++;
 
 		stream_size_gr += 1 + ctx_encode_tag(c1, tag); /* signal: hit (ctx1) + index (1 bit: 1) */
+		stream_size_gr_hit1 += 1 + ctx_encode_tag(c1, tag);
 	} else if (ctx_query_tag(c2, tag) != NULL) {
 		ctx2_hit++;
 
 		stream_size_gr += 2 + ctx_encode_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
+		stream_size_gr_hit2 += 2 + ctx_encode_tag(c2, tag);
 	} else {
 		ctx_miss++;
 
 		stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
+		stream_size_gr_miss += 3 + bio_sizeof_gr(gr_dict.opt_k, index);
 		update_model(index);
 	}
 
@@ -588,6 +594,11 @@ int main(int argc, char *argv[])
 	printf("ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw)/8));
 
 	printf("contexts: hit1=%zu hit2=%zu miss=%zu new_entry=%zu\n", ctx1_hit, ctx2_hit, ctx_miss, tag_newentry_count);
+	printf("ctx. size: hit1=%f%% hit2=%f%% miss=%f%%\n",
+		100.f*stream_size_gr_hit1/(stream_size_gr + stream_size_raw),
+		100.f*stream_size_gr_hit2/(stream_size_gr + stream_size_raw),
+		100.f*stream_size_gr_miss/(stream_size_gr + stream_size_raw)
+	);
 
 #if 0
 	dump_dict();
