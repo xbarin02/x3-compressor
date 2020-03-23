@@ -398,8 +398,6 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		}
 
 		// increment item->freq
-		/*struct item *item = ctx_query_tag(c1, tag);
-		item->freq++;*/
 		ctx_item_inc_freq(c1, tag);
 
 		// sort ctx
@@ -433,8 +431,7 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		ctx_add_tag(c2, tag);
 		ctx_sort(c2);
 	} else {
-		struct item *item = ctx_query_tag(c2, tag);
-		item->freq++;
+		ctx_item_inc_freq(c2, tag);
 		ctx_sort(c2);
 	}
 }
