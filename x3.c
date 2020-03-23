@@ -306,12 +306,7 @@ size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
 static void update_model(size_t delta)
 {
 	if (symbol_count == RESET_INTERVAL) {
-		int k;
-
-		for (k = 1; (symbol_count << k) <= symbol_sum; ++k)
-			;
-
-		opt_k = k - 1;
+		opt_k = get_opt_k(symbol_sum, symbol_count);
 
 		symbol_count = 0;
 		symbol_sum = 0;
