@@ -593,6 +593,8 @@ int main(int argc, char *argv[])
 
 	compress(ptr, size);
 
+	free(ptr);
+
 	printf("tags: match %zu, new entry %zu\n", tag_match_count, tag_newentry_count);
 	printf("input stream: %zu\n", size);
 	printf("est. stream size: %zu (tags %zu / %f%%, uncompressed %zu / %f%%)\n",
