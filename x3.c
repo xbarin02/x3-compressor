@@ -532,9 +532,9 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	int mode = 3;
 	size_t size = 2 + bio_sizeof_gr(gr_dict.opt_k, index);
 
-	if (ctx_query_tag(c0, tag) != NULL && 2 + ctx_sizeof_tag(c0, tag) < size) { // HACK
+	if (ctx_query_tag(c0, tag) != NULL && 2 + ctx_sizeof_tag(c0, tag) < size) {
 		mode = 0;
-		size = 2 + ctx_sizeof_tag(c0, tag); // HACK
+		size = 2 + ctx_sizeof_tag(c0, tag);
 	}
 	if (ctx_query_tag(c1, tag) != NULL && 2 + ctx_sizeof_tag(c1, tag) < size) {
 		mode = 1;
@@ -549,7 +549,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	switch (mode) {
 		case 0:
 			ctx0_hit++;
-			stream_size_gr += 2 + ctx_sizeof_tag(c0, tag); /* HACK signal: hit (ctx1) + index (2 bit: 00) */
+			stream_size_gr += 2 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index (2 bit: 00) */
 			stream_size_gr_hit0 += 2 + ctx_sizeof_tag(c0, tag);
 			break;
 		case 1:
