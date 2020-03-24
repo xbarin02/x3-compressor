@@ -47,6 +47,16 @@ struct ctx {
 	struct gr gr;
 };
 
+struct tag_pair {
+	size_t tag0;
+	size_t tag1;
+};
+
+// map: (tag, tag) -> index
+struct tag_pair *map0 = NULL;
+size_t tag_pair_elems = 0;
+size_t tag_pair_size = 1; /* allocated */
+
 /* allocated size, enlarged logarithmically */
 size_t dict_logsize = 0;
 size_t dict_size = 1;
@@ -57,6 +67,7 @@ size_t elems = 0;
 struct elem *dict = NULL;
 struct ctx *ctx1 = NULL;
 struct ctx ctx2[65536];
+struct ctx *ctx0 = NULL;
 
 struct gr gr_dict;
 
@@ -65,12 +76,74 @@ size_t tag_newentry_count = 0;
 size_t stream_size_raw = 0;
 size_t stream_size_raw_str = 0;
 size_t stream_size_gr = 0;
+size_t stream_size_gr_hit0 = 0;
 size_t stream_size_gr_hit1 = 0;
 size_t stream_size_gr_hit2 = 0;
 size_t stream_size_gr_miss = 0;
 size_t ctx_miss = 0;
+size_t ctx0_hit = 0;
 size_t ctx1_hit = 0;
 size_t ctx2_hit = 0;
+
+struct tag_pair make_tag_pair(size_t tag0, size_t tag1)
+{
+	struct tag_pair pair;
+
+	pair.tag0 = tag0;
+	pair.tag1 = tag1;
+
+	return pair;
+}
+
+void tag_pair_realloc()
+{
+	tag_pair_size <<= 1;
+
+	map0 = realloc(map0, sizeof(struct tag_pair) * tag_pair_size);
+
+	if (map0 == NULL) {
+		abort();
+	}
+
+	ctx0 = realloc(ctx0, tag_pair_size * sizeof(struct ctx));
+
+	if (ctx0 == NULL) {
+		abort();
+	}
+
+	memset(ctx0 + tag_pair_elems, 0, (tag_pair_size - tag_pair_elems) * sizeof(struct ctx));
+}
+
+void tag_pair_init()
+{
+	tag_pair_realloc();
+}
+
+size_t tag_pair_query(struct tag_pair *pair)
+{
+	for (size_t e = 0; e < tag_pair_elems; ++e) {
+		if (memcmp(&map0[e], pair, sizeof(struct tag_pair)) == 0) { // WARNING: should compare as .tag{0,1} == .tag{0,1}
+			return e;
+		}
+	}
+
+	return (size_t)-1;
+}
+
+size_t tag_pair_add(struct tag_pair *pair)
+{
+	assert(tag_pair_query(pair) == (size_t)-1);
+
+	if (tag_pair_elems == tag_pair_size) {
+		tag_pair_realloc();
+	}
+
+	map0[tag_pair_elems] = *pair;
+
+	tag_pair_elems++;
+
+	return tag_pair_elems - 1;
+}
 
 void fload(void *ptr, size_t size, FILE *stream)
 {
@@ -434,7 +507,7 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 }
 
 /* encode dict[index].tag in context, rather than index */
-void encode_tag(size_t context1, size_t context2, size_t index)
+void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 {
 	assert(ctx1 != NULL);
 
@@ -443,41 +516,65 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 
 	size_t tag = dict[index].tag;
 
+	// tags: (context0, context1, tag)
+	struct tag_pair ctx_pair = make_tag_pair(context0, context1);
+
+	size_t ctx0_id = 0;
+	if (tag_pair_query(&ctx_pair) != (size_t)-1) {
+		// found context id
+		ctx0_id = tag_pair_query(&ctx_pair);
+	}
+
+	struct ctx *c0 = ctx0 + ctx0_id;
+
 	// find best option
 
 	int mode = 3;
-	size_t size = 3 + bio_sizeof_gr(gr_dict.opt_k, index);
+	size_t size = 2 + bio_sizeof_gr(gr_dict.opt_k, index);
 
-	if (ctx_query_tag(c1, tag) != NULL && 1 + ctx_sizeof_tag(c1, tag) < size) {
-		mode = 1;
-		size = 1 + ctx_sizeof_tag(c1, tag);
+	if (ctx_query_tag(c0, tag) != NULL && 2 + ctx_sizeof_tag(c0, tag) < size) { // HACK
+		mode = 0;
+		size = 2 + ctx_sizeof_tag(c0, tag); // HACK
 	}
-	if (ctx_query_tag(c2, tag) != NULL && 2 + ctx_sizeof_tag(c2, tag) < size) {
+	if (ctx_query_tag(c1, tag) != NULL && 2 + ctx_sizeof_tag(c1, tag) < size) {
+		mode = 1;
+		size = 2 + ctx_sizeof_tag(c1, tag);
+	}
+	if (ctx_query_tag(c2, tag) != NULL && 3 + ctx_sizeof_tag(c2, tag) < size) {
 		mode = 2;
-		size = 2 + ctx_sizeof_tag(c2, tag);
+		size = 3 + ctx_sizeof_tag(c2, tag);
 	}
 
 	// encode
 	switch (mode) {
+		case 0:
+			ctx0_hit++;
+			stream_size_gr += 2 + ctx_sizeof_tag(c0, tag); /* HACK signal: hit (ctx1) + index (2 bit: 00) */
+			stream_size_gr_hit0 += 2 + ctx_sizeof_tag(c0, tag);
+			break;
 		case 1:
 			ctx1_hit++;
-			stream_size_gr += 1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index (1 bit: 1) */
-			stream_size_gr_hit1 += 1 + ctx_sizeof_tag(c1, tag);
+			stream_size_gr += 2 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index (2 bit: 01) */
+			stream_size_gr_hit1 += 2 + ctx_sizeof_tag(c1, tag);
 			break;
 		case 2:
 			ctx2_hit++;
-			stream_size_gr += 2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
-			stream_size_gr_hit2 += 2 + ctx_sizeof_tag(c2, tag);
+			stream_size_gr += 3 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index (3 bits: 110) */
+			stream_size_gr_hit2 += 3 + ctx_sizeof_tag(c2, tag);
 			break;
 		case 3:
 			ctx_miss++;
-			stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
-			stream_size_gr_miss += 3 + bio_sizeof_gr(gr_dict.opt_k, index);
+			stream_size_gr += 2 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (2 bits: 10) */
+			stream_size_gr_miss += 2 + bio_sizeof_gr(gr_dict.opt_k, index);
 			break;
 	}
 
 	// update models in all contexts
 
+	// mode = 0
+	if (ctx_query_tag(c0, tag) != NULL) {
+		ctx_encode_tag(c0, tag);
+	}
 	// mode = 1
 	if (ctx_query_tag(c1, tag) != NULL) {
 		ctx_encode_tag(c1, tag);
@@ -492,6 +589,14 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	}
 
 	// update contexts
+
+	if (ctx_query_tag(c0, tag) == NULL) {
+		ctx_add_tag(c0, tag);
+		ctx_sort(c0);
+	} else {
+		ctx_item_inc_freq(c0, tag);
+		ctx_sort(c0);
+	}
 
 	if (ctx_query_tag(c1, tag) == NULL) {
 		ctx_add_tag(c1, tag);
@@ -508,6 +613,13 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		ctx_item_inc_freq(c2, tag);
 		ctx_sort(c2);
 	}
+
+	struct tag_pair pair = make_tag_pair(context1, tag);
+
+	if (tag_pair_query(&pair) == (size_t)-1) {
+		// add new context
+		tag_pair_add(&pair);
+	}
 }
 
 size_t make_context2(char *p)
@@ -519,6 +631,7 @@ void compress(char *ptr, size_t size)
 {
 	char *end = ptr + size;
 
+	size_t context0 = 0; /* previous context1 */
 	size_t context1 = 0; /* last tag */
 	size_t context2 = 0; /* last two bytes */
 
@@ -527,6 +640,8 @@ void compress(char *ptr, size_t size)
 	for (size_t e = 0; e < 65536; ++e) {
 		gr_init(&ctx2[e].gr, 0);
 	}
+
+	tag_pair_init();
 
 	for (char *p = ptr; p < end; ) {
 		/* (1) look into dictionary */
@@ -540,8 +655,9 @@ void compress(char *ptr, size_t size)
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
 
-			encode_tag(context1, context2, index);
+			encode_tag(context0, context1, context2, index);
 
+			context0 = context1;
 			context1 = dict[index].tag;
 
 			dict[index].last_pos = p;
@@ -578,6 +694,7 @@ void compress(char *ptr, size_t size)
 
 			p += len;
 
+			context0 = 0;
 			context1 = 0;
 
 			if (p >= ptr + 2) {
@@ -588,7 +705,7 @@ void compress(char *ptr, size_t size)
 
 			tag_newentry_count++;
 
-			stream_size_raw += 3 + MATCH_LOGSIZE + 8 * len; /* 3 bits: 000 */
+			stream_size_raw += 3 + MATCH_LOGSIZE + 8 * len; /* 3 bits: 111 */
 			stream_size_raw_str += 8 * len;
 		}
 	}
@@ -653,12 +770,15 @@ int main(int argc, char *argv[])
 	printf("uncompressed raw output: %zu\n", stream_size_raw_str/8);
 	printf("ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw)/8));
 
-	printf("contexts: hit1=%zu hit2=%zu miss=%zu new_entry=%zu\n", ctx1_hit, ctx2_hit, ctx_miss, tag_newentry_count);
-	printf("ctx. size: hit1=%f%% hit2=%f%% miss=%f%%\n",
+	printf("contexts: hit0=%zu hit1=%zu hit2=%zu miss=%zu new_entry=%zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx_miss, tag_newentry_count);
+	printf("ctx. size: hit0=%f%% hit1=%f%% hit2=%f%% miss=%f%%\n",
+		100.f*stream_size_gr_hit0/(stream_size_gr + stream_size_raw),
 		100.f*stream_size_gr_hit1/(stream_size_gr + stream_size_raw),
 		100.f*stream_size_gr_hit2/(stream_size_gr + stream_size_raw),
 		100.f*stream_size_gr_miss/(stream_size_gr + stream_size_raw)
 	);
+
+	printf("tag_pair_elems = %zu\n", tag_pair_elems);
 
 #if 0
 	dump_dict();
