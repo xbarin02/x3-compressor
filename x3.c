@@ -442,7 +442,9 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	struct ctx *c2 = ctx2 + context2;
 
 	size_t tag = dict[index].tag;
-#if 1
+
+	// find best option
+
 	int mode = 3;
 	size_t size = 3 + bio_sizeof_gr(gr_dict.opt_k, index);
 
@@ -474,6 +476,8 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 			break;
 	}
 
+	// update models in all contexts
+
 	// mode = 1
 	if (ctx_query_tag(c1, tag) != NULL) {
 		ctx_encode_tag(c1, tag);
@@ -486,38 +490,9 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	if (mode == 3) {
 		update_model(index);
 	}
-#else
-	if (ctx_query_tag(c1, tag) != NULL) {
-		if (ctx_query_tag(c2, tag) != NULL && 2 + ctx_encode_tag(c2, tag) < 1 + ctx_encode_tag(c1, tag)) {
-			goto enc2;
-		}
-		if (3 + bio_sizeof_gr(gr_dict.opt_k, index) < 1 + ctx_encode_tag(c1, tag)) {
-			goto enc3;
-		}
 
-		ctx1_hit++;
+	// update contexts
 
-		stream_size_gr += 1 + ctx_encode_tag(c1, tag); /* signal: hit (ctx1) + index (1 bit: 1) */
-		stream_size_gr_hit1 += 1 + ctx_encode_tag(c1, tag);
-	} else if (ctx_query_tag(c2, tag) != NULL) {
-enc2:
-		if (3 + bio_sizeof_gr(gr_dict.opt_k, index) < 2 + ctx_encode_tag(c2, tag)) {
-			goto enc3;
-		}
-
-		ctx2_hit++;
-
-		stream_size_gr += 2 + ctx_encode_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
-		stream_size_gr_hit2 += 2 + ctx_encode_tag(c2, tag);
-	} else {
-enc3:
-		ctx_miss++;
-
-		stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
-		stream_size_gr_miss += 3 + bio_sizeof_gr(gr_dict.opt_k, index);
-		update_model(index);
-	}
-#endif
 	if (ctx_query_tag(c1, tag) == NULL) {
 		ctx_add_tag(c1, tag);
 		ctx_sort(c1);
