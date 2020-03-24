@@ -429,11 +429,16 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	size_t tag = dict[index].tag;
 
 	if (ctx_query_tag(c1, tag) != NULL) {
+		if (ctx_query_tag(c2, tag) != NULL && 2 + ctx_encode_tag(c2, tag) < 1 + ctx_encode_tag(c1, tag)) {
+			goto enc2;
+		}
+
 		ctx1_hit++;
 
 		stream_size_gr += 1 + ctx_encode_tag(c1, tag); /* signal: hit (ctx1) + index (1 bit: 1) */
 		stream_size_gr_hit1 += 1 + ctx_encode_tag(c1, tag);
 	} else if (ctx_query_tag(c2, tag) != NULL) {
+enc2:
 		ctx2_hit++;
 
 		stream_size_gr += 2 + ctx_encode_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
