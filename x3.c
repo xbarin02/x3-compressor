@@ -545,6 +545,15 @@ void compress(char *ptr, size_t size)
 			stream_size_raw_str += 8 * len;
 		}
 	}
+
+	for (size_t e = 0; e < elems; ++e) {
+		free(ctx1[e].arr);
+	}
+	for (size_t e = 0; e < 65536; ++e) {
+		free(ctx2[e].arr);
+	}
+	free(ctx1);
+	free(dict);
 }
 
 void dump_dict()
@@ -577,6 +586,8 @@ int main(int argc, char *argv[])
 	memset(ptr + size, 0, FORWARD_WINDOW);
 
 	fload(ptr, size, stream);
+
+	fclose(stream);
 
 	enlarge_dict();
 
