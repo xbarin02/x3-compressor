@@ -432,6 +432,9 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		if (ctx_query_tag(c2, tag) != NULL && 2 + ctx_encode_tag(c2, tag) < 1 + ctx_encode_tag(c1, tag)) {
 			goto enc2;
 		}
+		if (3 + bio_sizeof_gr(gr_dict.opt_k, index) < 1 + ctx_encode_tag(c1, tag)) {
+			goto enc3;
+		}
 
 		ctx1_hit++;
 
