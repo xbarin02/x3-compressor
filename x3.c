@@ -418,6 +418,21 @@ size_t ctx_encode_tag(struct ctx *ctx, size_t tag)
 	return size;
 }
 
+size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
+{
+	size_t size = 0;
+
+	if (ctx->items > 1) {
+		gr_recalc_k(&ctx->gr);
+		size_t item_index = ctx_query_tag_index(ctx, tag);
+		size += bio_sizeof_gr(ctx->gr.opt_k, item_index);
+	} else {
+		size += 0; /* no information needed */
+	}
+
+	return size;
+}
+
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context1, size_t context2, size_t index)
 {
@@ -427,7 +442,51 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 	struct ctx *c2 = ctx2 + context2;
 
 	size_t tag = dict[index].tag;
+#if 1
+	int mode = 3;
+	size_t size = 3 + bio_sizeof_gr(gr_dict.opt_k, index);
 
+	if (ctx_query_tag(c1, tag) != NULL && 1 + ctx_sizeof_tag(c1, tag) < size) {
+		mode = 1;
+		size = 1 + ctx_sizeof_tag(c1, tag);
+	}
+	if (ctx_query_tag(c2, tag) != NULL && 2 + ctx_sizeof_tag(c2, tag) < size) {
+		mode = 2;
+		size = 2 + ctx_sizeof_tag(c2, tag);
+	}
+
+	// encode
+	switch (mode) {
+		case 1:
+			ctx1_hit++;
+			stream_size_gr += 1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index (1 bit: 1) */
+			stream_size_gr_hit1 += 1 + ctx_sizeof_tag(c1, tag);
+			break;
+		case 2:
+			ctx2_hit++;
+			stream_size_gr += 2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
+			stream_size_gr_hit2 += 2 + ctx_sizeof_tag(c2, tag);
+			break;
+		case 3:
+			ctx_miss++;
+			stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
+			stream_size_gr_miss += 3 + bio_sizeof_gr(gr_dict.opt_k, index);
+			break;
+	}
+
+	// mode = 1
+	if (ctx_query_tag(c1, tag) != NULL) {
+		ctx_encode_tag(c1, tag);
+	}
+	// mode = 2
+	if (ctx_query_tag(c2, tag) != NULL) {
+		ctx_encode_tag(c2, tag);
+	}
+	// mode = 3
+	if (mode == 3) {
+		update_model(index);
+	}
+#else
 	if (ctx_query_tag(c1, tag) != NULL) {
 		if (ctx_query_tag(c2, tag) != NULL && 2 + ctx_encode_tag(c2, tag) < 1 + ctx_encode_tag(c1, tag)) {
 			goto enc2;
@@ -458,7 +517,7 @@ enc3:
 		stream_size_gr_miss += 3 + bio_sizeof_gr(gr_dict.opt_k, index);
 		update_model(index);
 	}
-
+#endif
 	if (ctx_query_tag(c1, tag) == NULL) {
 		ctx_add_tag(c1, tag);
 		ctx_sort(c1);
