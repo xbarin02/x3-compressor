@@ -439,11 +439,16 @@ void encode_tag(size_t context1, size_t context2, size_t index)
 		stream_size_gr_hit1 += 1 + ctx_encode_tag(c1, tag);
 	} else if (ctx_query_tag(c2, tag) != NULL) {
 enc2:
+		if (3 + bio_sizeof_gr(gr_dict.opt_k, index) < 2 + ctx_encode_tag(c2, tag)) {
+			goto enc3;
+		}
+
 		ctx2_hit++;
 
 		stream_size_gr += 2 + ctx_encode_tag(c2, tag); /* signal: hit (ctx2) + index (2 bits: 01) */
 		stream_size_gr_hit2 += 2 + ctx_encode_tag(c2, tag);
 	} else {
+enc3:
 		ctx_miss++;
 
 		stream_size_gr += 3 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (3 bits: 001) */
