@@ -6,7 +6,7 @@
 #include <limits.h>
 
 /* search buffer */
-#define FORWARD_WINDOW (8 * 1024)
+#define FORWARD_WINDOW (4 * 1024)
 
 /* log. size */
 #define MATCH_LOGSIZE 3
