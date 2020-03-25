@@ -65,9 +65,9 @@ size_t dict_size = 1;
 size_t elems = 0;
 
 struct elem *dict = NULL;
+struct ctx *ctx0 = NULL;
 struct ctx *ctx1 = NULL;
 struct ctx ctx2[65536];
-struct ctx *ctx0 = NULL;
 
 struct gr gr_dict;
 
@@ -653,7 +653,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 
 size_t make_context2(char *p)
 {
-	return (unsigned char)p[-1] | (unsigned char)p[-2];
+	return (unsigned char)p[-1] | (((unsigned char)p[-2]) << 8);
 }
 
 void compress(char *ptr, size_t size)
