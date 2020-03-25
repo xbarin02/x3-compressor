@@ -816,6 +816,8 @@ int main(int argc, char *argv[])
 	);
 
 	printf("ctx0 entries: %zu\n", tag_pair_elems);
+	printf("ctx1 entries: %zu\n", elems);
+	printf("ctx2 entries: %zu\n", (size_t)65536);
 
 #if 0
 	dump_dict();
