@@ -718,6 +718,12 @@ void compress(char *ptr, size_t size)
 	}
 	free(ctx1);
 	free(dict);
+
+	for (size_t e = 0; e < tag_pair_elems; ++e) {
+		free(ctx0[e].arr);
+	}
+	free(ctx0);
+	free(map0);
 }
 
 void dump_dict()
