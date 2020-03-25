@@ -71,8 +71,9 @@ struct ctx *ctx0 = NULL;
 
 struct gr gr_dict;
 
-size_t tag_match_count = 0;
-size_t tag_newentry_count = 0;
+size_t dict_hit_count = 0;
+size_t dict_miss_count = 0;
+size_t stream_size = 0;
 size_t stream_size_raw = 0;
 size_t stream_size_raw_str = 0;
 size_t stream_size_gr = 0;
@@ -573,22 +574,26 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	switch (mode) {
 		case 0:
 			ctx0_hit++;
-			stream_size_gr += 2 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index (2 bit: 00) */
+			stream_size += 2 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index (2 bit: 00) */
+			stream_size_gr += 2 + ctx_sizeof_tag(c0, tag);
 			stream_size_gr_hit0 += 2 + ctx_sizeof_tag(c0, tag);
 			break;
 		case 1:
 			ctx1_hit++;
-			stream_size_gr += 2 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index (2 bit: 01) */
+			stream_size += 2 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index (2 bit: 01) */
+			stream_size_gr += 2 + ctx_sizeof_tag(c1, tag);
 			stream_size_gr_hit1 += 2 + ctx_sizeof_tag(c1, tag);
 			break;
 		case 2:
 			ctx2_hit++;
-			stream_size_gr += 3 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index (3 bits: 110) */
+			stream_size += 3 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index (3 bits: 110) */
+			stream_size_gr += 3 + ctx_sizeof_tag(c2, tag);
 			stream_size_gr_hit2 += 3 + ctx_sizeof_tag(c2, tag);
 			break;
 		case 3:
 			ctx_miss++;
-			stream_size_gr += 2 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (2 bits: 10) */
+			stream_size += 2 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (2 bits: 10) */
+			stream_size_gr += 2 + bio_sizeof_gr(gr_dict.opt_k, index);
 			stream_size_gr_miss += 2 + bio_sizeof_gr(gr_dict.opt_k, index);
 			break;
 	}
@@ -695,7 +700,7 @@ void compress(char *ptr, size_t size)
 			/* recalc all costs, sort */
 			update_dict(p);
 
-			tag_match_count++;
+			dict_hit_count++;
 		} else {
 			/* (2) else find best match and insert it into dictionary */
 			size_t len = find_best_match(p);
@@ -727,8 +732,9 @@ void compress(char *ptr, size_t size)
 
 			update_dict(p);
 
-			tag_newentry_count++;
+			dict_miss_count++;
 
+			stream_size += 3 + MATCH_LOGSIZE + 8 * len; /* 3 bits: 111 */
 			stream_size_raw += 3 + MATCH_LOGSIZE + 8 * len; /* 3 bits: 111 */
 			stream_size_raw_str += 8 * len;
 		}
@@ -789,26 +795,27 @@ int main(int argc, char *argv[])
 
 	free(ptr);
 
-	printf("tags: match %zu, new entry %zu\n", tag_match_count, tag_newentry_count);
-	printf("input stream: %zu\n", size);
-	printf("est. stream size: %zu (tags %zu / %f%%, uncompressed %zu / %f%%)\n",
-		(stream_size_gr + stream_size_raw)/8,
-		stream_size_gr/8, 100.f*stream_size_gr/(stream_size_gr + stream_size_raw),
-		stream_size_raw/8, 100.f*stream_size_raw/(stream_size_gr + stream_size_raw)
-	);
-	printf("Golomb-Rice stream size: %zu\n", stream_size_gr/8);
-	printf("uncompressed raw output: %zu\n", stream_size_raw_str/8);
-	printf("ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw)/8));
+	printf("input stream size: %zu\n", size);
+	printf("output stream size: %zu\n", (stream_size + 7) / 8);
+	printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, dict_miss_count);
 
-	printf("contexts: hit0=%zu hit1=%zu hit2=%zu miss=%zu new_entry=%zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx_miss, tag_newentry_count);
-	printf("ctx. size: hit0=%f%% hit1=%f%% hit2=%f%% miss=%f%%\n",
-		100.f*stream_size_gr_hit0/(stream_size_gr + stream_size_raw),
-		100.f*stream_size_gr_hit1/(stream_size_gr + stream_size_raw),
-		100.f*stream_size_gr_hit2/(stream_size_gr + stream_size_raw),
-		100.f*stream_size_gr_miss/(stream_size_gr + stream_size_raw)
+	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), uncompressed %zu / %f%% of which raw %zu / %f%%\n",
+		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
+		(stream_size_raw + 7) / 8, 100.f * stream_size_raw / stream_size,
+		(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
 	);
 
-	printf("tag_pair_elems = %zu\n", tag_pair_elems);
+	printf("compression ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
+
+	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, no context %zu; uncompressed %zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx_miss, dict_miss_count);
+	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, no context %f%%\n",
+		100.f * stream_size_gr_hit0 / stream_size,
+		100.f * stream_size_gr_hit1 / stream_size,
+		100.f * stream_size_gr_hit2 / stream_size,
+		100.f * stream_size_gr_miss / stream_size
+	);
+
+	printf("ctx0 entries: %zu\n", tag_pair_elems);
 
 #if 0
 	dump_dict();
