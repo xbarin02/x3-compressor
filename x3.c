@@ -9,7 +9,7 @@
 #define FORWARD_WINDOW (4 * 1024)
 
 /* log. size */
-#define MATCH_LOGSIZE /*3*/4
+#define MATCH_LOGSIZE 4
 
 /* look-ahead buffer */
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
