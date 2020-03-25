@@ -95,6 +95,30 @@ struct tag_pair make_tag_pair(size_t tag0, size_t tag1)
 	return pair;
 }
 
+int tag_pair_compar(const void *l, const void *r)
+{
+	const struct tag_pair *lpair = l;
+	const struct tag_pair *rpair = r;
+
+	if (lpair->tag0 < rpair->tag0) {
+		return -1;
+	}
+
+	if (lpair->tag0 > rpair->tag0) {
+		return +1;
+	}
+
+	if (lpair->tag1 < rpair->tag1) {
+		return -1;
+	}
+
+	if (lpair->tag1 > rpair->tag1) {
+		return +1;
+	}
+
+	return 0;
+}
+
 void tag_pair_realloc()
 {
 	tag_pair_size <<= 1;
@@ -122,7 +146,7 @@ void tag_pair_init()
 size_t tag_pair_query(struct tag_pair *pair)
 {
 	for (size_t e = 0; e < tag_pair_elems; ++e) {
-		if (memcmp(&map0[e], pair, sizeof(struct tag_pair)) == 0) { // WARNING: should compare as .tag{0,1} == .tag{0,1}
+		if (tag_pair_compar(&map0[e], pair) == 0) {
 			return e;
 		}
 	}
