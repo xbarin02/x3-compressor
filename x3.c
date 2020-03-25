@@ -15,7 +15,7 @@
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
 
 /* found empirically */
-#define TCOUNT 10
+#define TCOUNT /*10*/11
 
 /* recompute Golomb-Rice codes after... */
 #define RESET_INTERVAL 256
