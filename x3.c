@@ -519,10 +519,10 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	// tags: (context0, context1, tag)
 	struct tag_pair ctx_pair = make_tag_pair(context0, context1);
 
-	size_t ctx0_id = 0;
-	if (tag_pair_query(&ctx_pair) != (size_t)-1) {
-		// found context id
-		ctx0_id = tag_pair_query(&ctx_pair);
+	size_t ctx0_id = tag_pair_query(&ctx_pair);
+	if (ctx0_id == (size_t)-1) {
+		// not found context id
+		ctx0_id = 0;
 	}
 
 	struct ctx *c0 = ctx0 + ctx0_id;
