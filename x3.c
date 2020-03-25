@@ -15,7 +15,7 @@
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
 
 /* found empirically */
-#define TCOUNT 11
+#define MATCH_COUNT 11
 
 /* recompute Golomb-Rice codes after... */
 #define RESET_INTERVAL 256
@@ -206,7 +206,7 @@ size_t find_best_match(char *p)
 {
 	char *end = p + FORWARD_WINDOW;
 
-	for (int tc = TCOUNT; tc > 0; --tc) {
+	for (int tc = MATCH_COUNT; tc > 0; --tc) {
 		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
 			/* trying match string of the length 'len' chars */
 			int count = 0;
