@@ -320,7 +320,7 @@ void fill_elem(struct elem *e, char *p, size_t len)
 	e->cost = calc_cost(e, p);
 }
 
-static int cmp(const void *l, const void *r)
+static int elem_compar(const void *l, const void *r)
 {
 	const struct elem *le = l;
 	const struct elem *re = r;
@@ -394,7 +394,7 @@ void update_dict(char *p)
 		dict[i].cost = calc_cost(&dict[i], p);
 	}
 
-	qsort(dict, elems, sizeof(struct elem), cmp);
+	qsort(dict, elems, sizeof(struct elem), elem_compar);
 
 	if (elems >= 2) {
 		assert(dict[0].cost <= dict[1].cost);
@@ -499,7 +499,7 @@ int elem_query_dictionary(struct elem *e)
 	return 0;
 }
 
-int compar_items(const void *l, const void *r)
+int item_compar(const void *l, const void *r)
 {
 	const struct item *li = l;
 	const struct item *ri = r;
@@ -518,7 +518,7 @@ int compar_items(const void *l, const void *r)
 /* sort ctx->items[] according to item.freq */
 void ctx_sort(struct ctx *ctx)
 {
-	qsort(ctx->arr, ctx->items, sizeof(struct item), compar_items);
+	qsort(ctx->arr, ctx->items, sizeof(struct item), item_compar);
 
 	if (ctx->items > 1) {
 		assert(ctx->arr[0].freq >= ctx->arr[1].freq);
