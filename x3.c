@@ -50,10 +50,13 @@ struct ctx {
 struct tag_pair {
 	size_t tag0;
 	size_t tag1;
+
+	size_t e; /* linear id */
+	struct tag_pair *l, *r;
 };
 
 // map: (tag, tag) -> index
-struct tag_pair *map0 = NULL;
+struct tag_pair *map0 = NULL; /* root */
 size_t tag_pair_elems = 0;
 size_t tag_pair_size = 1; /* allocated */
 
@@ -123,13 +126,13 @@ int tag_pair_compar(const void *l, const void *r)
 void tag_pair_realloc()
 {
 	tag_pair_size <<= 1;
-
+#if 0
 	map0 = realloc(map0, sizeof(struct tag_pair) * tag_pair_size);
 
 	if (map0 == NULL) {
 		abort();
 	}
-
+#endif
 	ctx0 = realloc(ctx0, tag_pair_size * sizeof(struct ctx));
 
 	if (ctx0 == NULL) {
@@ -146,12 +149,27 @@ void tag_pair_init()
 
 size_t tag_pair_query(struct tag_pair *pair)
 {
+#if 0
 	for (size_t e = 0; e < tag_pair_elems; ++e) {
 		if (tag_pair_compar(&map0[e], pair) == 0) {
 			return e;
 		}
 	}
+#else
+	struct tag_pair *this = map0;
 
+	while (this != NULL) {
+		int r = tag_pair_compar(this, pair);
+
+		if (r == 0) {
+			return this->e;
+		} else if (r < 0) {
+			this = this->l;
+		} else {
+			this = this->r;
+		}
+	}
+#endif
 	return (size_t)-1;
 }
 
@@ -163,8 +181,30 @@ size_t tag_pair_add(struct tag_pair *pair)
 		tag_pair_realloc();
 	}
 
+#if 0
 	map0[tag_pair_elems] = *pair;
+#else
+	struct tag_pair **this = &map0;
 
+	while (*this != NULL) {
+		if (tag_pair_compar(*this, pair) < 0) {
+			this = & (*this)->l;
+		} else {
+			this = & (*this)->r;
+		}
+	}
+
+	*this = malloc(sizeof(struct tag_pair));
+
+	if (*this == NULL) {
+		abort();
+	}
+
+	**this = *pair;
+	(*this)->e = tag_pair_elems;
+	(*this)->l = NULL;
+	(*this)->r = NULL;
+#endif
 	tag_pair_elems++;
 
 	return tag_pair_elems - 1;
@@ -756,7 +796,9 @@ void compress(char *ptr, size_t size)
 		free(ctx0[e].arr);
 	}
 	free(ctx0);
+#if 0
 	free(map0);
+#endif
 }
 
 void dump_dict()
