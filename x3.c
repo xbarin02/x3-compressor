@@ -334,7 +334,7 @@ size_t find_in_dictionary(const char *p)
 	for (size_t i = 0; i < elems; ++i) {
 		assert(dict[i].len > 0);
 
-		if (dict[i].len > 0 && memcmp(p, dict[i].s, dict[i].len) == 0) {
+		if (memcmp(p, dict[i].s, dict[i].len) == 0) {
 			/* match */
 #if 0
 			printf("dictionary match @ [%i] len %zu\n", i, dict[i].len);
@@ -420,7 +420,7 @@ void update_model(size_t delta)
 	gr_update(&gr_dict, delta);
 }
 
-struct item *ctx_query_tag(struct ctx *c, size_t tag)
+struct item *ctx_query_tag_item(struct ctx *c, size_t tag)
 {
 	for (size_t i = 0; i < c->items; ++i) {
 		if (c->arr[i].tag == tag) {
@@ -444,7 +444,7 @@ size_t ctx_query_tag_index(struct ctx *c, size_t tag)
 
 void ctx_add_tag(struct ctx *c, size_t tag)
 {
-	assert(!ctx_query_tag(c, tag));
+	assert(!ctx_query_tag_item(c, tag));
 
 	c->items++;
 
@@ -497,7 +497,7 @@ void ctx_sort(struct ctx *ctx)
 
 void ctx_item_inc_freq(struct ctx *ctx, size_t tag)
 {
-	struct item *item = ctx_query_tag(ctx, tag);
+	struct item *item = ctx_query_tag_item(ctx, tag);
 
 	item->freq++;
 }
@@ -560,15 +560,15 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	int mode = 3;
 	size_t size = 2 + bio_sizeof_gr(gr_dict.opt_k, index);
 
-	if (ctx_query_tag(c0, tag) != NULL && 2 + ctx_sizeof_tag(c0, tag) < size) {
+	if (ctx_query_tag_item(c0, tag) != NULL && 2 + ctx_sizeof_tag(c0, tag) < size) {
 		mode = 0;
 		size = 2 + ctx_sizeof_tag(c0, tag);
 	}
-	if (ctx_query_tag(c1, tag) != NULL && 2 + ctx_sizeof_tag(c1, tag) < size) {
+	if (ctx_query_tag_item(c1, tag) != NULL && 2 + ctx_sizeof_tag(c1, tag) < size) {
 		mode = 1;
 		size = 2 + ctx_sizeof_tag(c1, tag);
 	}
-	if (ctx_query_tag(c2, tag) != NULL && 3 + ctx_sizeof_tag(c2, tag) < size) {
+	if (ctx_query_tag_item(c2, tag) != NULL && 3 + ctx_sizeof_tag(c2, tag) < size) {
 		mode = 2;
 		size = 3 + ctx_sizeof_tag(c2, tag);
 	}
@@ -604,15 +604,15 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	// update models in all contexts
 
 	// mode = 0
-	if (ctx_query_tag(c0, tag) != NULL) {
+	if (ctx_query_tag_item(c0, tag) != NULL) {
 		ctx_encode_tag(c0, tag);
 	}
 	// mode = 1
-	if (ctx_query_tag(c1, tag) != NULL) {
+	if (ctx_query_tag_item(c1, tag) != NULL) {
 		ctx_encode_tag(c1, tag);
 	}
 	// mode = 2
-	if (ctx_query_tag(c2, tag) != NULL) {
+	if (ctx_query_tag_item(c2, tag) != NULL) {
 		ctx_encode_tag(c2, tag);
 	}
 	// mode = 3
@@ -622,7 +622,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 
 	// update contexts
 
-	if (ctx_query_tag(c0, tag) == NULL) {
+	if (ctx_query_tag_item(c0, tag) == NULL) {
 		ctx_add_tag(c0, tag);
 		ctx_sort(c0);
 	} else {
@@ -630,7 +630,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 		ctx_sort(c0);
 	}
 
-	if (ctx_query_tag(c1, tag) == NULL) {
+	if (ctx_query_tag_item(c1, tag) == NULL) {
 		ctx_add_tag(c1, tag);
 		ctx_sort(c1);
 	} else {
@@ -638,7 +638,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 		ctx_sort(c1);
 	}
 
-	if (ctx_query_tag(c2, tag) == NULL) {
+	if (ctx_query_tag_item(c2, tag) == NULL) {
 		ctx_add_tag(c2, tag);
 		ctx_sort(c2);
 	} else {
