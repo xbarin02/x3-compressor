@@ -55,7 +55,7 @@ struct tag_pair {
 	struct tag_pair *l, *r;
 };
 
-// map: (tag, tag) -> index
+/* map: (tag, tag) -> index */
 struct tag_pair *map0 = NULL; /* root */
 size_t tag_pair_elems = 0;
 size_t tag_pair_size = 1; /* allocated */
@@ -388,9 +388,6 @@ size_t find_in_dictionary(const char *p)
 
 void update_dict(char *p)
 {
-	struct elem e0;
-	memset(&e0, 0, sizeof(struct elem));
-
 	for (size_t i = 0; i < elems; ++i) {
 		assert(!is_zero(&dict[i]));
 
