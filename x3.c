@@ -437,15 +437,15 @@ void gr_update(struct gr *gr, size_t symb)
 	gr->symb_cnt++;
 }
 
-void update_model(size_t delta)
+void update_model(struct gr *gr, size_t delta)
 {
-	if (gr_dict.symb_cnt == RESET_INTERVAL) {
-		gr_recalc_k(&gr_dict);
+	if (gr->symb_cnt == RESET_INTERVAL) {
+		gr_recalc_k(gr);
 
-		gr_init(&gr_dict, gr_dict.opt_k);
+		gr_init(gr, gr->opt_k);
 	}
 
-	gr_update(&gr_dict, delta);
+	gr_update(gr, delta);
 }
 
 struct item *ctx_query_tag_item(struct ctx *c, size_t tag)
@@ -645,7 +645,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	}
 	// mode = 3
 	if (mode == 3) {
-		update_model(index);
+		update_model(&gr_dict, index);
 	}
 
 	// update contexts
