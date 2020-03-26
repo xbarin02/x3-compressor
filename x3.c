@@ -316,8 +316,6 @@ void fill_elem(struct elem *e, char *p, size_t len)
 	e->len = len;
 
 	e->last_pos = p;
-
-	e->cost = calc_cost(e, p);
 }
 
 static int elem_compar(const void *l, const void *r)
