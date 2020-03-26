@@ -322,6 +322,7 @@ void insert_elem(const struct elem *e)
 
 	dict[elems] = *e;
 	dict[elems].tag = elems; /* element is filled except a tag, set the tag */
+
 	elems++;
 }
 
@@ -331,6 +332,8 @@ size_t find_in_dictionary(const char *p)
 	size_t best_len_i;
 
 	for (size_t i = 0; i < elems; ++i) {
+		assert(dict[i].len > 0);
+
 		if (dict[i].len > 0 && memcmp(p, dict[i].s, dict[i].len) == 0) {
 			/* match */
 #if 0
