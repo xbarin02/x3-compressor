@@ -6,16 +6,16 @@
 #include <limits.h>
 
 /* search buffer */
-#define FORWARD_WINDOW (4 * 1024)
+static size_t g_forward_window = 4 * 1024;
+
+/* found empirically */
+static int g_max_match_count = 10;
 
 /* log. size */
 #define MATCH_LOGSIZE 4
 
 /* look-ahead buffer */
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
-
-/* found empirically */
-#define MAX_MATCH_COUNT 10
 
 /* recompute Golomb-Rice codes after... */
 #define RESET_INTERVAL 256
@@ -238,9 +238,9 @@ size_t fsize(FILE *stream)
 
 size_t find_best_match(char *p)
 {
-	char *end = p + FORWARD_WINDOW;
+	char *end = p + g_forward_window;
 
-	for (int tc = MAX_MATCH_COUNT; tc > 0; --tc) {
+	for (int tc = g_max_match_count; tc > 0; --tc) {
 		for (size_t len = MAX_MATCH_LEN; len > 0; --len) {
 			/* trying match string of the length 'len' chars */
 			int count = 0;
@@ -821,13 +821,13 @@ int main(int argc, char *argv[])
 
 	size_t size = fsize(stream);
 
-	char *ptr = malloc(size + FORWARD_WINDOW);
+	char *ptr = malloc(size + g_forward_window);
 
 	if (ptr == NULL) {
 		abort();
 	}
 
-	memset(ptr + size, 0, FORWARD_WINDOW);
+	memset(ptr + size, 0, g_forward_window);
 
 	fload(ptr, size, stream);
 
