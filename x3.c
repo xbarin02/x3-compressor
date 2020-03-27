@@ -845,7 +845,7 @@ int main(int argc, char *argv[])
 	printf("output stream size: %zu\n", (stream_size + 7) / 8);
 	printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, dict_miss_count);
 
-	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), uncompressed %zu / %f%% of which raw %zu / %f%%\n",
+	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), uncompressed %zu / %f%% (of which raw %zu / %f%%)\n",
 		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
 		(stream_size_raw + 7) / 8, 100.f * stream_size_raw / stream_size,
 		(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
@@ -861,9 +861,7 @@ int main(int argc, char *argv[])
 		100.f * stream_size_gr_miss / stream_size
 	);
 
-	printf("ctx0 entries: %zu\n", tag_pair_elems);
-	printf("ctx1 entries: %zu\n", elems);
-	printf("ctx2 entries: %zu\n", (size_t)65536);
+	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu\n", tag_pair_elems, elems, (size_t)65536);
 
 	return 0;
 }
