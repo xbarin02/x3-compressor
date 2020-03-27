@@ -687,13 +687,9 @@ size_t make_context2(char *p)
 	return (unsigned char)p[-1] | (((unsigned char)p[-2]) << 8);
 }
 
-void compress(char *ptr, size_t size)
+void create()
 {
-	char *end = ptr + size;
-
-	size_t context0 = 0; /* previous context1 */
-	size_t context1 = 0; /* last tag */
-	size_t context2 = 0; /* last two bytes */
+	enlarge_dict();
 
 	gr_init(&gr_dict, 11);
 
@@ -702,6 +698,15 @@ void compress(char *ptr, size_t size)
 	}
 
 	tag_pair_init();
+}
+
+void compress(char *ptr, size_t size)
+{
+	char *end = ptr + size;
+
+	size_t context0 = 0; /* previous context1 */
+	size_t context1 = 0; /* last tag */
+	size_t context2 = 0; /* last two bytes */
 
 	for (char *p = ptr; p < end; ) {
 		/* (1) look into dictionary */
@@ -770,6 +775,20 @@ void compress(char *ptr, size_t size)
 			stream_size_raw_str += 8 * len;
 		}
 	}
+}
+
+void dump_dict()
+{
+	for (size_t i = 0; i < elems; ++i) {
+		printf("dict[%zu] = \"%.*s\" (len=%zu)\n", i, (int)dict[i].len, dict[i].s, dict[i].len);
+	}
+}
+
+void destroy()
+{
+#if 0
+	dump_dict();
+#endif
 
 	for (size_t e = 0; e < elems; ++e) {
 		free(ctx1[e].arr);
@@ -786,13 +805,6 @@ void compress(char *ptr, size_t size)
 	free(ctx0);
 
 	tag_pair_free(map0);
-}
-
-void dump_dict()
-{
-	for (size_t i = 0; i < elems; ++i) {
-		printf("dict[%zu] = \"%.*s\" (len=%zu)\n", i, (int)dict[i].len, dict[i].s, dict[i].len);
-	}
 }
 
 int main(int argc, char *argv[])
@@ -821,9 +833,11 @@ int main(int argc, char *argv[])
 
 	fclose(stream);
 
-	enlarge_dict();
+	create();
 
 	compress(ptr, size);
+
+	destroy();
 
 	free(ptr);
 
@@ -850,10 +864,6 @@ int main(int argc, char *argv[])
 	printf("ctx0 entries: %zu\n", tag_pair_elems);
 	printf("ctx1 entries: %zu\n", elems);
 	printf("ctx2 entries: %zu\n", (size_t)65536);
-
-#if 0
-	dump_dict();
-#endif
 
 	return 0;
 }
