@@ -1,9 +1,11 @@
+#define _POSIX_C_SOURCE 2
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <unistd.h>
 
 /* search buffer */
 static size_t g_forward_window = 4 * 1024;
@@ -809,7 +811,38 @@ void destroy()
 
 int main(int argc, char *argv[])
 {
-	char *path = argc > 1 ? argv[1] : "enwik6";
+	parse: switch (getopt(argc, argv, "ht:w:")) {
+		case 'h':
+			// print_help(argv[0]);
+			return 0;
+		case 't':
+			g_max_match_count = atoi(optarg);
+			goto parse;
+		case 'w':
+			g_forward_window = atoi(optarg) * 1024;
+			goto parse;
+		default:
+			abort();
+		case -1:
+		;
+	}
+
+	char *path;
+
+	switch (argc - optind) {
+		case 0:
+			path = "enwik6";
+			break;
+		case 1:
+			path = argv[optind];
+			break;
+		default:
+			fprintf(stderr, "Unexpected argument\n");
+			abort();
+	}
+
+	printf("max match count: %i\n", g_max_match_count);
+	printf("forward window: %zu\n", g_forward_window);
 
 	printf("path: %s\n", path);
 
