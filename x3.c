@@ -73,6 +73,7 @@ struct elem *dict = NULL;
 struct ctx *ctx0 = NULL;
 struct ctx *ctx1 = NULL;
 struct ctx ctx2[65536];
+struct ctx ctx3[256];
 
 struct gr gr_dict;
 
@@ -85,11 +86,13 @@ size_t stream_size_gr = 0;
 size_t stream_size_gr_hit0 = 0;
 size_t stream_size_gr_hit1 = 0;
 size_t stream_size_gr_hit2 = 0;
+size_t stream_size_gr_hit3 = 0;
 size_t stream_size_gr_miss = 0;
 size_t ctx_miss = 0;
 size_t ctx0_hit = 0;
 size_t ctx1_hit = 0;
 size_t ctx2_hit = 0;
+size_t ctx3_hit = 0;
 
 struct tag_pair make_tag_pair(size_t tag0, size_t tag1)
 {
@@ -571,6 +574,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 
 	struct ctx *c1 = ctx1 + context1;
 	struct ctx *c2 = ctx2 + context2;
+	struct ctx *c3 = ctx3 + (context2 & 255);
 
 	size_t tag = dict[index].tag;
 
@@ -602,6 +606,10 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 		mode = 2;
 		size = 3 + ctx_sizeof_tag(c2, tag);
 	}
+	if (ctx_query_tag_item(c3, tag) != NULL && 4 + ctx_sizeof_tag(c3, tag) < size) {
+		mode = 4;
+		size = 4 + ctx_sizeof_tag(c3, tag);
+	}
 
 	// encode
 	switch (mode) {
@@ -629,6 +637,12 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 			stream_size_gr += 2 + bio_sizeof_gr(gr_dict.opt_k, index);
 			stream_size_gr_miss += 2 + bio_sizeof_gr(gr_dict.opt_k, index);
 			break;
+		case 4:
+			ctx3_hit++;
+			stream_size += 4 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index (4 bits: 1110) */
+			stream_size_gr += 4 + ctx_sizeof_tag(c3, tag);
+			stream_size_gr_hit3 += 4 + ctx_sizeof_tag(c3, tag);
+			break;
 	}
 
 	// update models in all contexts
@@ -648,6 +662,10 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	// mode = 3
 	if (mode == 3) {
 		update_model(&gr_dict, index);
+	}
+	// mode = 4
+	if (ctx_query_tag_item(c3, tag) != NULL) {
+		ctx_encode_tag(c3, tag);
 	}
 
 	// update contexts
@@ -676,6 +694,14 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 		ctx_sort(c2);
 	}
 
+	if (ctx_query_tag_item(c3, tag) == NULL) {
+		ctx_add_tag(c3, tag);
+		ctx_sort(c3);
+	} else {
+		ctx_item_inc_freq(c3, tag);
+		ctx_sort(c3);
+	}
+
 	struct tag_pair pair = make_tag_pair(context1, tag);
 
 	if (tag_pair_query(&pair) == (size_t)-1) {
@@ -697,6 +723,10 @@ void create()
 
 	for (size_t e = 0; e < 65536; ++e) {
 		gr_init(&ctx2[e].gr, 0);
+	}
+
+	for (size_t e = 0; e < 256; ++e) {
+		gr_init(&ctx3[e].gr, 0);
 	}
 
 	tag_pair_init();
@@ -772,8 +802,8 @@ void compress(char *ptr, size_t size)
 
 			dict_miss_count++;
 
-			stream_size += 3 + MATCH_LOGSIZE + 8 * len; /* 3 bits: 111 */
-			stream_size_raw += 3 + MATCH_LOGSIZE + 8 * len; /* 3 bits: 111 */
+			stream_size += 4 + MATCH_LOGSIZE + 8 * len; /* 4 bits: 1111 */
+			stream_size_raw += 4 + MATCH_LOGSIZE + 8 * len; /* 4 bits: 1111 */
 			stream_size_raw_str += 8 * len;
 		}
 	}
@@ -797,6 +827,9 @@ void destroy()
 	}
 	for (size_t e = 0; e < 65536; ++e) {
 		free(ctx2[e].arr);
+	}
+	for (size_t e = 0; e < 256; ++e) {
+		free(ctx3[e].arr);
 	}
 	free(ctx1);
 	free(dict);
@@ -886,15 +919,16 @@ int main(int argc, char *argv[])
 
 	printf("compression ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
 
-	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, no context %zu; uncompressed %zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx_miss, dict_miss_count);
-	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, no context %f%%\n",
+	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, no context %zu; uncompressed %zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx3_hit, ctx_miss, dict_miss_count);
+	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, no context %f%%\n",
 		100.f * stream_size_gr_hit0 / stream_size,
 		100.f * stream_size_gr_hit1 / stream_size,
 		100.f * stream_size_gr_hit2 / stream_size,
+		100.f * stream_size_gr_hit3 / stream_size,
 		100.f * stream_size_gr_miss / stream_size
 	);
 
-	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu\n", tag_pair_elems, elems, (size_t)65536);
+	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_elems, elems, (size_t)65536, (size_t)256);
 
 	return 0;
 }
