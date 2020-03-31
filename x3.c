@@ -11,10 +11,12 @@
 #endif
 
 /* search buffer */
-static size_t g_forward_window = 4 * 1024;
+static size_t g_forward_window = 128 * 1024;
 
 /* found empirically */
-static int g_max_match_count = 10;
+static int g_max_match_count = 62;
+
+static int g_num_threads = 32;
 
 /* log. size */
 #define MATCH_LOGSIZE 4
@@ -248,8 +250,6 @@ int pow2_p(size_t n)
 {
 	return (n & (n - 1)) == 0;
 }
-
-static int g_num_threads = 8;
 
 #ifdef _OPENMP
 size_t find_best_match(char *p)
@@ -937,6 +937,9 @@ int main(int argc, char *argv[])
 
 	printf("max match count: %i\n", g_max_match_count);
 	printf("forward window: %zu\n", g_forward_window);
+#ifdef _OPENMP
+	printf("threads: %i\n", g_num_threads);
+#endif
 
 	printf("path: %s\n", path);
 
