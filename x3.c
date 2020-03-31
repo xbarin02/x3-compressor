@@ -9,6 +9,7 @@
 #ifdef _OPENMP
 #	include <omp.h>
 #endif
+#include <time.h>
 
 /* search buffer */
 static size_t g_forward_window = 128 * 1024;
@@ -277,8 +278,12 @@ size_t find_best_match(char *p)
 				char *s0 = p + (id + 0) * segment_size;
 				char *s1 = p + (id + 1) * segment_size;
 
-				if (s0 == p) s0 = p + len;
-				if (s1 == end) s1 = end - len;
+				if (s0 == p) {
+					s0 = p + len;
+				}
+				if (s1 == end) {
+					s1 = end - len;
+				}
 
 				/* start matching at 's' */
 				for (char *s = s0; s < s1; ) {
@@ -968,7 +973,11 @@ int main(int argc, char *argv[])
 
 	create();
 
+	clock_t start = clock();
+
 	compress(ptr, size);
+
+	printf("elapsed time: %f\n", (clock() - start) / (float)CLOCKS_PER_SEC);
 
 	destroy();
 
