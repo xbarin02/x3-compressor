@@ -16,7 +16,7 @@ static size_t g_forward_window = 128 * 1024;
 /* found empirically */
 static int g_max_match_count = 62;
 
-static int g_num_threads = 32;
+static int g_num_threads = 16;
 
 /* log. size */
 #define MATCH_LOGSIZE 4
@@ -905,7 +905,7 @@ void destroy()
 
 int main(int argc, char *argv[])
 {
-	parse: switch (getopt(argc, argv, "ht:w:")) {
+	parse: switch (getopt(argc, argv, "ht:w:T:")) {
 		case 'h':
 			// print_help(argv[0]);
 			return 0;
@@ -914,6 +914,9 @@ int main(int argc, char *argv[])
 			goto parse;
 		case 'w':
 			g_forward_window = atoi(optarg) * 1024;
+			goto parse;
+		case 'T':
+			g_num_threads = atoi(optarg);
 			goto parse;
 		default:
 			abort();
