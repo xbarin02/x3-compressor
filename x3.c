@@ -12,10 +12,10 @@
 #include <time.h>
 
 /* search buffer */
-static size_t g_forward_window = 128 * 1024;
+static size_t g_forward_window = 8 * 1024;
 
 /* found empirically */
-static int g_max_match_count = 62;
+static int g_max_match_count = 17;
 
 static int g_num_threads = 16;
 
@@ -908,6 +908,18 @@ void destroy()
 	tag_pair_free(map0);
 }
 
+long wall_clock()
+{
+	struct timespec t;
+
+	if (clock_gettime(CLOCK_REALTIME, &t) < 0) {
+		fprintf(stderr, "wall-clock error\n");
+		return 0;
+	}
+
+	return t.tv_sec * 1000000000L + t.tv_nsec;
+}
+
 int main(int argc, char *argv[])
 {
 	parse: switch (getopt(argc, argv, "ht:w:T:")) {
@@ -973,11 +985,11 @@ int main(int argc, char *argv[])
 
 	create();
 
-	clock_t start = clock();
+	long start = wall_clock();
 
 	compress(ptr, size);
 
-	printf("elapsed time: %f\n", (clock() - start) / (float)CLOCKS_PER_SEC);
+	printf("elapsed time: %f\n", (wall_clock() - start) / (float)1000000000L);
 
 	destroy();
 
