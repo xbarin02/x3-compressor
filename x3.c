@@ -15,7 +15,7 @@
 static size_t g_forward_window = 8 * 1024;
 
 /* found empirically */
-static int g_max_match_count = 17;
+static int g_max_match_count = 15;
 
 static int g_num_threads = 8;
 
