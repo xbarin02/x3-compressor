@@ -1005,7 +1005,11 @@ int main(int argc, char *argv[])
 		(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
 	);
 
+#if 1
+	printf("\x1b[37;1mcompression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
+#else
 	printf("compression ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
+#endif
 
 	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, no context %zu; uncompressed %zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx3_hit, ctx_miss, dict_miss_count);
 	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, no context %f%%\n",
