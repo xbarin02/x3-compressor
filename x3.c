@@ -82,6 +82,7 @@ struct ctx ctx2[65536];
 struct ctx ctx3[256];
 
 struct gr gr_dict;
+struct gr gr_dict2;
 
 size_t dict_hit_count = 0;
 size_t dict_miss_count = 0;
@@ -94,7 +95,9 @@ size_t stream_size_gr_hit1 = 0;
 size_t stream_size_gr_hit2 = 0;
 size_t stream_size_gr_hit3 = 0;
 size_t stream_size_gr_miss = 0;
+size_t stream_size_gr_miss2 = 0;
 size_t ctx_miss = 0;
+size_t ctx_miss2 = 0;
 size_t ctx0_hit = 0;
 size_t ctx1_hit = 0;
 size_t ctx2_hit = 0;
@@ -634,7 +637,7 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 }
 
 /* encode dict[index].tag in context, rather than index */
-void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
+void encode_tag(size_t context0, size_t context1, size_t context2, size_t index, size_t pindex)
 {
 	assert(ctx1 != NULL);
 
@@ -676,6 +679,10 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 		mode = 4;
 		size = 4 + ctx_sizeof_tag(c3, tag);
 	}
+	if (pindex != (size_t)-1 && index >= pindex && 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex) < size) {
+		mode = 5;
+		size = 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
+	}
 
 	// encode
 	switch (mode) {
@@ -709,6 +716,12 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 			stream_size_gr += 4 + ctx_sizeof_tag(c3, tag);
 			stream_size_gr_hit3 += 4 + ctx_sizeof_tag(c3, tag);
 			break;
+		case 5:
+			ctx_miss2++;
+			stream_size += 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index (5 bits: 11110) */
+			stream_size_gr += 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
+			stream_size_gr_miss2 += 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
+			break;
 	}
 
 	// update models in all contexts
@@ -732,6 +745,10 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index)
 	// mode = 4
 	if (ctx_query_tag_item(c3, tag) != NULL) {
 		ctx_encode_tag(c3, tag);
+	}
+	// mode 5
+	if (mode == 5) {
+		update_model(&gr_dict2, index - pindex);
 	}
 
 	// update contexts
@@ -785,7 +802,8 @@ void create()
 {
 	enlarge_dict();
 
-	gr_init(&gr_dict, 11);
+	gr_init(&gr_dict, 6);
+	gr_init(&gr_dict2, 0);
 
 	for (size_t e = 0; e < 65536; ++e) {
 		gr_init(&ctx2[e].gr, 0);
@@ -805,6 +823,7 @@ void compress(char *ptr, size_t size)
 	size_t context0 = 0; /* previous context1 */
 	size_t context1 = 0; /* last tag */
 	size_t context2 = 0; /* last two bytes */
+	size_t pindex = (size_t)-1; /* previous index */
 
 	for (char *p = ptr; p < end; ) {
 		/* (1) look into dictionary */
@@ -818,7 +837,7 @@ void compress(char *ptr, size_t size)
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
 
-			encode_tag(context0, context1, context2, index);
+			encode_tag(context0, context1, context2, index, pindex);
 
 			context0 = context1;
 			context1 = dict[index].tag;
@@ -833,6 +852,8 @@ void compress(char *ptr, size_t size)
 
 			/* recalc all costs, sort */
 			update_dict(p);
+
+			pindex = index;
 
 			dict_hit_count++;
 		} else {
@@ -866,10 +887,12 @@ void compress(char *ptr, size_t size)
 
 			update_dict(p);
 
+			pindex = (size_t)-1;
+
 			dict_miss_count++;
 
-			stream_size += 4 + MATCH_LOGSIZE + 8 * len; /* 4 bits: 1111 */
-			stream_size_raw += 4 + MATCH_LOGSIZE + 8 * len; /* 4 bits: 1111 */
+			stream_size += 5 + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
+			stream_size_raw += 5 + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
 			stream_size_raw_str += 8 * len;
 		}
 	}
@@ -1011,13 +1034,14 @@ int main(int argc, char *argv[])
 	printf("compression ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
 #endif
 
-	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, no context %zu; uncompressed %zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx3_hit, ctx_miss, dict_miss_count);
-	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, no context %f%%\n",
+	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, no context %zu %zu; uncompressed %zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx3_hit, ctx_miss, ctx_miss2, dict_miss_count);
+	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, no context %f%% %f%%\n",
 		100.f * stream_size_gr_hit0 / stream_size,
 		100.f * stream_size_gr_hit1 / stream_size,
 		100.f * stream_size_gr_hit2 / stream_size,
 		100.f * stream_size_gr_hit3 / stream_size,
-		100.f * stream_size_gr_miss / stream_size
+		100.f * stream_size_gr_miss / stream_size,
+		100.f * stream_size_gr_miss2 / stream_size
 	);
 
 	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_elems, elems, (size_t)65536, (size_t)256);
