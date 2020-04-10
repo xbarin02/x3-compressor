@@ -636,6 +636,24 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 	return size;
 }
 
+#if 0
+#	define SIZEOF_BITCODE_CTX0 2 /* mode 0 */
+#	define SIZEOF_BITCODE_CTX1 3 /* mode 1 */
+#	define SIZEOF_BITCODE_CTX2 3 /* mode 2 */
+#	define SIZEOF_BITCODE_MISS 2 /* mode 3 */
+#	define SIZEOF_BITCODE_CTX3 4 /* mode 4 */
+#	define SIZEOF_BITCODE_MISS2 5 /* mode 5 */
+#	define SIZEOF_BITCODE_NEW 5 /* uncompressed */
+#else
+#	define SIZEOF_BITCODE_CTX0  2
+#	define SIZEOF_BITCODE_CTX1  1
+#	define SIZEOF_BITCODE_CTX2  4
+#	define SIZEOF_BITCODE_MISS  3
+#	define SIZEOF_BITCODE_CTX3  6
+#	define SIZEOF_BITCODE_MISS2 5
+#	define SIZEOF_BITCODE_NEW   6
+#endif
+
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context0, size_t context1, size_t context2, size_t index, size_t pindex)
 {
@@ -661,66 +679,66 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 	// find best option
 
 	int mode = 3;
-	size_t size = 2 + bio_sizeof_gr(gr_dict.opt_k, index);
+	size_t size = SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
 
-	if (ctx_query_tag_item(c0, tag) != NULL && 2 + ctx_sizeof_tag(c0, tag) < size) {
+	if (ctx_query_tag_item(c0, tag) != NULL && SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag) < size) {
 		mode = 0;
-		size = 2 + ctx_sizeof_tag(c0, tag);
+		size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
 	}
-	if (ctx_query_tag_item(c1, tag) != NULL && 2 + ctx_sizeof_tag(c1, tag) < size) {
+	if (ctx_query_tag_item(c1, tag) != NULL && SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag) < size) {
 		mode = 1;
-		size = 2 + ctx_sizeof_tag(c1, tag);
+		size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
 	}
-	if (ctx_query_tag_item(c2, tag) != NULL && 3 + ctx_sizeof_tag(c2, tag) < size) {
+	if (ctx_query_tag_item(c2, tag) != NULL && SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag) < size) {
 		mode = 2;
-		size = 3 + ctx_sizeof_tag(c2, tag);
+		size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 	}
-	if (ctx_query_tag_item(c3, tag) != NULL && 4 + ctx_sizeof_tag(c3, tag) < size) {
+	if (ctx_query_tag_item(c3, tag) != NULL && SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag) < size) {
 		mode = 4;
-		size = 4 + ctx_sizeof_tag(c3, tag);
+		size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 	}
-	if (pindex != (size_t)-1 && index >= pindex && 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex) < size) {
+	if (pindex != (size_t)-1 && index >= pindex && SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex) < size) {
 		mode = 5;
-		size = 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
+		size = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
 	}
 
 	// encode
 	switch (mode) {
 		case 0:
 			ctx0_hit++;
-			stream_size += 2 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index (2 bit: 00) */
-			stream_size_gr += 2 + ctx_sizeof_tag(c0, tag);
-			stream_size_gr_hit0 += 2 + ctx_sizeof_tag(c0, tag);
+			stream_size += SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index (2 bit: 00) */
+			stream_size_gr += SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
+			stream_size_gr_hit0 += SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
 			break;
 		case 1:
 			ctx1_hit++;
-			stream_size += 2 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index (2 bit: 01) */
-			stream_size_gr += 2 + ctx_sizeof_tag(c1, tag);
-			stream_size_gr_hit1 += 2 + ctx_sizeof_tag(c1, tag);
+			stream_size += SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index (2 bit: 01) */
+			stream_size_gr += SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
+			stream_size_gr_hit1 += SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
 			break;
 		case 2:
 			ctx2_hit++;
-			stream_size += 3 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index (3 bits: 110) */
-			stream_size_gr += 3 + ctx_sizeof_tag(c2, tag);
-			stream_size_gr_hit2 += 3 + ctx_sizeof_tag(c2, tag);
+			stream_size += SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index (3 bits: 110) */
+			stream_size_gr += SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
+			stream_size_gr_hit2 += SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 			break;
 		case 3:
 			ctx_miss++;
-			stream_size += 2 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (2 bits: 10) */
-			stream_size_gr += 2 + bio_sizeof_gr(gr_dict.opt_k, index);
-			stream_size_gr_miss += 2 + bio_sizeof_gr(gr_dict.opt_k, index);
+			stream_size += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (2 bits: 10) */
+			stream_size_gr += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
+			stream_size_gr_miss += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
 			break;
 		case 4:
 			ctx3_hit++;
-			stream_size += 4 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index (4 bits: 1110) */
-			stream_size_gr += 4 + ctx_sizeof_tag(c3, tag);
-			stream_size_gr_hit3 += 4 + ctx_sizeof_tag(c3, tag);
+			stream_size += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index (4 bits: 1110) */
+			stream_size_gr += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
+			stream_size_gr_hit3 += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 			break;
 		case 5:
 			ctx_miss2++;
-			stream_size += 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index (5 bits: 11110) */
-			stream_size_gr += 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
-			stream_size_gr_miss2 += 5 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
+			stream_size += SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index (5 bits: 11110) */
+			stream_size_gr += SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
+			stream_size_gr_miss2 += SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
 			break;
 	}
 
@@ -891,8 +909,8 @@ void compress(char *ptr, size_t size)
 
 			dict_miss_count++;
 
-			stream_size += 5 + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
-			stream_size_raw += 5 + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
+			stream_size += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
+			stream_size_raw += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
 			stream_size_raw_str += 8 * len;
 		}
 	}
