@@ -85,7 +85,6 @@ struct gr gr_dict;
 struct gr gr_dict2;
 
 size_t dict_hit_count = 0;
-size_t dict_miss_count = 0;
 size_t stream_size = 0;
 size_t stream_size_raw = 0;
 size_t stream_size_raw_str = 0;
@@ -96,12 +95,6 @@ size_t stream_size_gr_hit2 = 0;
 size_t stream_size_gr_hit3 = 0;
 size_t stream_size_gr_miss = 0;
 size_t stream_size_gr_miss2 = 0;
-size_t ctx_miss = 0;
-size_t ctx_miss2 = 0;
-size_t ctx0_hit = 0;
-size_t ctx1_hit = 0;
-size_t ctx2_hit = 0;
-size_t ctx3_hit = 0;
 
 struct tag_pair make_tag_pair(size_t tag0, size_t tag1)
 {
@@ -728,42 +721,42 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 	switch (mode) {
 		size_t bitcode;
 		case E_CTX0:
-			ctx0_hit++;
+			events[E_CTX0]++;
 			bitcode = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_hit0 += bitcode;
 			break;
 		case E_CTX1:
-			ctx1_hit++;
+			events[E_CTX1]++;
 			bitcode = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_hit1 += bitcode;
 			break;
 		case E_CTX2:
-			ctx2_hit++;
+			events[E_CTX2]++;
 			bitcode = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_hit2 += bitcode;
 			break;
 		case E_CTX3:
-			ctx3_hit++;
+			events[E_CTX3]++;
 			bitcode = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_hit3 += bitcode;
 			break;
 		case E_MISS1:
-			ctx_miss++;
+			events[E_MISS1]++;
 			bitcode = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_miss += bitcode;
 			break;
 		case E_MISS2:
-			ctx_miss2++;
+			events[E_MISS2]++;
 			bitcode = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
@@ -936,7 +929,7 @@ void compress(char *ptr, size_t size)
 
 			pindex = (size_t)-1;
 
-			dict_miss_count++;
+			events[E_NEW]++;
 
 			stream_size += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
 			stream_size_raw += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
@@ -1067,7 +1060,7 @@ int main(int argc, char *argv[])
 
 	printf("input stream size: %zu\n", size);
 	printf("output stream size: %zu\n", (stream_size + 7) / 8);
-	printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, dict_miss_count);
+	printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, events[E_NEW]);
 
 	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), new %zu / %f%% (of which text %zu / %f%%)\n",
 		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
@@ -1082,7 +1075,7 @@ int main(int argc, char *argv[])
 #endif
 
 	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu; new %zu\n",
-		ctx0_hit, ctx1_hit, ctx2_hit, ctx3_hit, ctx_miss, ctx_miss2, dict_miss_count);
+		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_MISS1], events[E_MISS2], events[E_NEW]);
 	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
 		100.f * stream_size_gr_hit0 / stream_size,
 		100.f * stream_size_gr_hit1 / stream_size,
