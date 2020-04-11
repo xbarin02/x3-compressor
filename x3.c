@@ -89,12 +89,6 @@ size_t stream_size = 0;
 size_t stream_size_raw = 0;
 size_t stream_size_raw_str = 0;
 size_t stream_size_gr = 0;
-size_t stream_size_gr_hit0 = 0;
-size_t stream_size_gr_hit1 = 0;
-size_t stream_size_gr_hit2 = 0;
-size_t stream_size_gr_hit3 = 0;
-size_t stream_size_gr_miss = 0;
-size_t stream_size_gr_miss2 = 0;
 
 struct tag_pair make_tag_pair(size_t tag0, size_t tag1)
 {
@@ -669,6 +663,8 @@ enum {
  */
 size_t events[7];
 
+size_t sizes[7];
+
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context0, size_t context1, size_t context2, size_t index, size_t pindex)
 {
@@ -718,49 +714,44 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 	}
 
 	// encode
+	events[mode]++;
+
 	switch (mode) {
-		size_t bitcode;
 		case E_CTX0:
-			events[E_CTX0]++;
-			bitcode = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index */
-			stream_size += bitcode;
-			stream_size_gr += bitcode;
-			stream_size_gr_hit0 += bitcode;
+// 			size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index */
+			stream_size += size;
+			stream_size_gr += size;
+			sizes[E_CTX0] += size;
 			break;
 		case E_CTX1:
-			events[E_CTX1]++;
-			bitcode = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index */
-			stream_size += bitcode;
-			stream_size_gr += bitcode;
-			stream_size_gr_hit1 += bitcode;
+// 			size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index */
+			stream_size += size;
+			stream_size_gr += size;
+			sizes[E_CTX1] += size;
 			break;
 		case E_CTX2:
-			events[E_CTX2]++;
-			bitcode = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index */
-			stream_size += bitcode;
-			stream_size_gr += bitcode;
-			stream_size_gr_hit2 += bitcode;
+// 			size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index */
+			stream_size += size;
+			stream_size_gr += size;
+			sizes[E_CTX2] += size;
 			break;
 		case E_CTX3:
-			events[E_CTX3]++;
-			bitcode = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index */
-			stream_size += bitcode;
-			stream_size_gr += bitcode;
-			stream_size_gr_hit3 += bitcode;
+// 			size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index */
+			stream_size += size;
+			stream_size_gr += size;
+			sizes[E_CTX3] += size;
 			break;
 		case E_MISS1:
-			events[E_MISS1]++;
-			bitcode = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index */
-			stream_size += bitcode;
-			stream_size_gr += bitcode;
-			stream_size_gr_miss += bitcode;
+// 			size = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index */
+			stream_size += size;
+			stream_size_gr += size;
+			sizes[E_MISS1] += size;
 			break;
 		case E_MISS2:
-			events[E_MISS2]++;
-			bitcode = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index */
-			stream_size += bitcode;
-			stream_size_gr += bitcode;
-			stream_size_gr_miss2 += bitcode;
+// 			size = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index */
+			stream_size += size;
+			stream_size_gr += size;
+			sizes[E_MISS2] += size;
 			break;
 	}
 
@@ -1074,15 +1065,15 @@ int main(int argc, char *argv[])
 	printf("compression ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
 #endif
 
-	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu; new %zu\n",
+	printf("number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
 		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_MISS1], events[E_MISS2], events[E_NEW]);
 	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
-		100.f * stream_size_gr_hit0 / stream_size,
-		100.f * stream_size_gr_hit1 / stream_size,
-		100.f * stream_size_gr_hit2 / stream_size,
-		100.f * stream_size_gr_hit3 / stream_size,
-		100.f * stream_size_gr_miss / stream_size,
-		100.f * stream_size_gr_miss2 / stream_size,
+		100.f * sizes[E_CTX0] / stream_size,
+		100.f * sizes[E_CTX1] / stream_size,
+		100.f * sizes[E_CTX2] / stream_size,
+		100.f * sizes[E_CTX3] / stream_size,
+		100.f * sizes[E_MISS1] / stream_size,
+		100.f * sizes[E_MISS2] / stream_size,
 		100.f * stream_size_raw / stream_size
 	);
 
