@@ -715,43 +715,22 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 
 	// encode
 	events[mode]++;
+	sizes[mode] += size;
+	stream_size += size;
+	stream_size_gr += size;
 
 	switch (mode) {
 		case E_CTX0:
-// 			size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index */
-			stream_size += size;
-			stream_size_gr += size;
-			sizes[E_CTX0] += size;
 			break;
 		case E_CTX1:
-// 			size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index */
-			stream_size += size;
-			stream_size_gr += size;
-			sizes[E_CTX1] += size;
 			break;
 		case E_CTX2:
-// 			size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index */
-			stream_size += size;
-			stream_size_gr += size;
-			sizes[E_CTX2] += size;
 			break;
 		case E_CTX3:
-// 			size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index */
-			stream_size += size;
-			stream_size_gr += size;
-			sizes[E_CTX3] += size;
 			break;
 		case E_MISS1:
-// 			size = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index */
-			stream_size += size;
-			stream_size_gr += size;
-			sizes[E_MISS1] += size;
 			break;
 		case E_MISS2:
-// 			size = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index */
-			stream_size += size;
-			stream_size_gr += size;
-			sizes[E_MISS2] += size;
 			break;
 	}
 
