@@ -640,7 +640,7 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 #	define SIZEOF_BITCODE_CTX0 2 /* mode 0 */
 #	define SIZEOF_BITCODE_CTX1 3 /* mode 1 */
 #	define SIZEOF_BITCODE_CTX2 3 /* mode 2 */
-#	define SIZEOF_BITCODE_MISS 2 /* mode 3 */
+#	define SIZEOF_BITCODE_MISS1 2 /* mode 3 */
 #	define SIZEOF_BITCODE_CTX3 4 /* mode 4 */
 #	define SIZEOF_BITCODE_MISS2 5 /* mode 5 */
 #	define SIZEOF_BITCODE_NEW 5 /* uncompressed */
@@ -648,11 +648,33 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 #	define SIZEOF_BITCODE_CTX0  2
 #	define SIZEOF_BITCODE_CTX1  1
 #	define SIZEOF_BITCODE_CTX2  4
-#	define SIZEOF_BITCODE_MISS  3
 #	define SIZEOF_BITCODE_CTX3  6
+#	define SIZEOF_BITCODE_MISS1 3
 #	define SIZEOF_BITCODE_MISS2 5
 #	define SIZEOF_BITCODE_NEW   6
 #endif
+
+/* list of events */
+enum {
+	E_CTX0 = 0,
+	E_CTX1 = 1,
+	E_CTX2 = 2,
+	E_CTX3 = 3,
+	E_MISS1 = 4,
+	E_MISS2 = 5,
+	E_NEW = 6
+};
+
+/*
+ * [0] = tag in ctx0
+ * [1] = tag in ctx1
+ * [2] = tag in ctx2
+ * [3] = tag in ctx3
+ * [4] = tag in miss1
+ * [5] = tag in miss2
+ * [6] = new tag (uncompressed)
+ */
+size_t events[7];
 
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t context0, size_t context1, size_t context2, size_t index, size_t pindex)
@@ -678,69 +700,69 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 
 	// find best option
 
-	int mode = 4;
-	size_t size = SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
+	int mode = E_MISS1;
+	size_t size = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict.opt_k, index);
 
 	if (ctx_query_tag_item(c0, tag) != NULL && SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag) < size) {
-		mode = 0;
+		mode = E_CTX0;
 		size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
 	}
 	if (ctx_query_tag_item(c1, tag) != NULL && SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag) < size) {
-		mode = 1;
+		mode = E_CTX1;
 		size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
 	}
 	if (ctx_query_tag_item(c2, tag) != NULL && SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag) < size) {
-		mode = 2;
+		mode = E_CTX2;
 		size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 	}
 	if (ctx_query_tag_item(c3, tag) != NULL && SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag) < size) {
-		mode = 3;
+		mode = E_CTX3;
 		size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 	}
 	if (pindex != (size_t)-1 && index >= pindex && SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex) < size) {
-		mode = 5;
+		mode = E_MISS2;
 		size = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
 	}
 
 	// encode
 	switch (mode) {
 		size_t bitcode;
-		case 0:
+		case E_CTX0:
 			ctx0_hit++;
 			bitcode = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_hit0 += bitcode;
 			break;
-		case 1:
+		case E_CTX1:
 			ctx1_hit++;
 			bitcode = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_hit1 += bitcode;
 			break;
-		case 2:
+		case E_CTX2:
 			ctx2_hit++;
 			bitcode = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_hit2 += bitcode;
 			break;
-		case 3:
+		case E_CTX3:
 			ctx3_hit++;
 			bitcode = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_hit3 += bitcode;
 			break;
-		case 4:
+		case E_MISS1:
 			ctx_miss++;
-			bitcode = SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index */
+			bitcode = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index */
 			stream_size += bitcode;
 			stream_size_gr += bitcode;
 			stream_size_gr_miss += bitcode;
 			break;
-		case 5:
+		case E_MISS2:
 			ctx_miss2++;
 			bitcode = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index */
 			stream_size += bitcode;
@@ -768,11 +790,11 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 		ctx_encode_tag(c3, tag);
 	}
 	// mode = 4
-	if (mode == 4) {
+	if (mode == E_MISS1) {
 		update_model(&gr_dict, index);
 	}
-	// mode 5
-	if (mode == 5) {
+	// mode = 5
+	if (mode == E_MISS2) {
 		update_model(&gr_dict2, index - pindex);
 	}
 
@@ -1047,7 +1069,7 @@ int main(int argc, char *argv[])
 	printf("output stream size: %zu\n", (stream_size + 7) / 8);
 	printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, dict_miss_count);
 
-	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), uncompressed %zu / %f%% (of which raw %zu / %f%%)\n",
+	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), new %zu / %f%% (of which text %zu / %f%%)\n",
 		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
 		(stream_size_raw + 7) / 8, 100.f * stream_size_raw / stream_size,
 		(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
@@ -1059,14 +1081,16 @@ int main(int argc, char *argv[])
 	printf("compression ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
 #endif
 
-	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, no context %zu %zu; uncompressed %zu\n", ctx0_hit, ctx1_hit, ctx2_hit, ctx3_hit, ctx_miss, ctx_miss2, dict_miss_count);
-	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, no context %f%% %f%%\n",
+	printf("contexts used: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu; new %zu\n",
+		ctx0_hit, ctx1_hit, ctx2_hit, ctx3_hit, ctx_miss, ctx_miss2, dict_miss_count);
+	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
 		100.f * stream_size_gr_hit0 / stream_size,
 		100.f * stream_size_gr_hit1 / stream_size,
 		100.f * stream_size_gr_hit2 / stream_size,
 		100.f * stream_size_gr_hit3 / stream_size,
 		100.f * stream_size_gr_miss / stream_size,
-		100.f * stream_size_gr_miss2 / stream_size
+		100.f * stream_size_gr_miss2 / stream_size,
+		100.f * stream_size_raw / stream_size
 	);
 
 	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_elems, elems, (size_t)65536, (size_t)256);
