@@ -704,41 +704,48 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 
 	// encode
 	switch (mode) {
+		size_t bitcode;
 		case 0:
 			ctx0_hit++;
-			stream_size += SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index (2 bit: 00) */
-			stream_size_gr += SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
-			stream_size_gr_hit0 += SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
+			bitcode = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag); /* signal: hit (ctx1) + index */
+			stream_size += bitcode;
+			stream_size_gr += bitcode;
+			stream_size_gr_hit0 += bitcode;
 			break;
 		case 1:
 			ctx1_hit++;
-			stream_size += SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index (2 bit: 01) */
-			stream_size_gr += SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
-			stream_size_gr_hit1 += SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
+			bitcode = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag); /* signal: hit (ctx1) + index */
+			stream_size += bitcode;
+			stream_size_gr += bitcode;
+			stream_size_gr_hit1 += bitcode;
 			break;
 		case 2:
 			ctx2_hit++;
-			stream_size += SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index (3 bits: 110) */
-			stream_size_gr += SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
-			stream_size_gr_hit2 += SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
+			bitcode = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag); /* signal: hit (ctx2) + index */
+			stream_size += bitcode;
+			stream_size_gr += bitcode;
+			stream_size_gr_hit2 += bitcode;
 			break;
 		case 3:
 			ctx3_hit++;
-			stream_size += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index (4 bits: 1110) */
-			stream_size_gr += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
-			stream_size_gr_hit3 += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
+			bitcode = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index */
+			stream_size += bitcode;
+			stream_size_gr += bitcode;
+			stream_size_gr_hit3 += bitcode;
 			break;
 		case 4:
 			ctx_miss++;
-			stream_size += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (2 bits: 10) */
-			stream_size_gr += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
-			stream_size_gr_miss += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
+			bitcode = SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index */
+			stream_size += bitcode;
+			stream_size_gr += bitcode;
+			stream_size_gr_miss += bitcode;
 			break;
 		case 5:
 			ctx_miss2++;
-			stream_size += SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index (5 bits: 11110) */
-			stream_size_gr += SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
-			stream_size_gr_miss2 += SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
+			bitcode = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex); /* signal: miss2 + index */
+			stream_size += bitcode;
+			stream_size_gr += bitcode;
+			stream_size_gr_miss2 += bitcode;
 			break;
 	}
 
