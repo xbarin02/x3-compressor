@@ -678,7 +678,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 
 	// find best option
 
-	int mode = 3;
+	int mode = 4;
 	size_t size = SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
 
 	if (ctx_query_tag_item(c0, tag) != NULL && SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag) < size) {
@@ -694,7 +694,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 		size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 	}
 	if (ctx_query_tag_item(c3, tag) != NULL && SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag) < size) {
-		mode = 4;
+		mode = 3;
 		size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 	}
 	if (pindex != (size_t)-1 && index >= pindex && SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex) < size) {
@@ -723,16 +723,16 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 			stream_size_gr_hit2 += SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 			break;
 		case 3:
-			ctx_miss++;
-			stream_size += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (2 bits: 10) */
-			stream_size_gr += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
-			stream_size_gr_miss += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
-			break;
-		case 4:
 			ctx3_hit++;
 			stream_size += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag); /* signal: hit (ctx3) + index (4 bits: 1110) */
 			stream_size_gr += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 			stream_size_gr_hit3 += SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
+			break;
+		case 4:
+			ctx_miss++;
+			stream_size += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index); /* signal: miss + index (2 bits: 10) */
+			stream_size_gr += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
+			stream_size_gr_miss += SIZEOF_BITCODE_MISS + bio_sizeof_gr(gr_dict.opt_k, index);
 			break;
 		case 5:
 			ctx_miss2++;
@@ -757,12 +757,12 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 		ctx_encode_tag(c2, tag);
 	}
 	// mode = 3
-	if (mode == 3) {
-		update_model(&gr_dict, index);
-	}
-	// mode = 4
 	if (ctx_query_tag_item(c3, tag) != NULL) {
 		ctx_encode_tag(c3, tag);
+	}
+	// mode = 4
+	if (mode == 4) {
+		update_model(&gr_dict, index);
 	}
 	// mode 5
 	if (mode == 5) {
