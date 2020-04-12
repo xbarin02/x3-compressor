@@ -84,10 +84,7 @@ struct ctx ctx3[256];
 struct gr gr_dict;
 struct gr gr_dict2;
 
-size_t dict_hit_count = 0;
-size_t stream_size = 0;
 size_t stream_size_raw_str = 0;
-size_t stream_size_gr = 0;
 
 struct tag_pair make_tag_pair(size_t tag0, size_t tag1)
 {
@@ -715,8 +712,6 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 	// encode
 	events[mode]++;
 	sizes[mode] += size;
-	stream_size += size;
-	stream_size_gr += size;
 
 	switch (mode) {
 		case E_CTX0:
@@ -863,8 +858,6 @@ void compress(char *ptr, size_t size)
 			update_dict(p);
 
 			pindex = index;
-
-			dict_hit_count++;
 		} else {
 			/* (2) else find best match and insert it into dictionary */
 			size_t len = find_best_match(p);
@@ -900,7 +893,6 @@ void compress(char *ptr, size_t size)
 
 			events[E_NEW]++;
 
-			stream_size += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
 			sizes[E_NEW] += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
 			stream_size_raw_str += 8 * len;
 		}
@@ -1026,6 +1018,11 @@ int main(int argc, char *argv[])
 	destroy();
 
 	free(ptr);
+
+	size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_MISS1] + events[E_MISS2];
+
+	size_t stream_size_gr = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_MISS1] + sizes[E_MISS2];
+	size_t stream_size = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_MISS1] + sizes[E_MISS2] + sizes[E_NEW];
 
 	printf("input stream size: %zu\n", size);
 	printf("output stream size: %zu\n", (stream_size + 7) / 8);
