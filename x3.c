@@ -64,7 +64,7 @@ struct tag_pair {
 };
 
 /* map: (tag, tag) -> index */
-struct tag_pair *map0 = NULL; /* root */
+struct tag_pair *map0 = NULL; /* root of tree */
 size_t tag_pair_elems = 0;
 size_t tag_pair_size = 1; /* allocated */
 
@@ -72,10 +72,11 @@ size_t tag_pair_size = 1; /* allocated */
 size_t dict_logsize = 0;
 size_t dict_size = 1;
 
-/* number of elements */
-size_t elems = 0;
+/* number of elements in the dictionary */
+size_t dict_elems = 0;
 
-struct elem *dict = NULL;
+struct elem *dict = NULL; /* the dictionary, sorted by distance = curr_pos - dict[i]->last_pos */
+
 struct ctx *ctx0 = NULL; /* previous two tags */
 struct ctx *ctx1 = NULL; /* previous tag */
 struct ctx ctx2[65536];  /* last two bytes */
@@ -345,9 +346,9 @@ void enlarge_dict()
 		abort();
 	}
 
-	memset(ctx1 + elems, 0, (dict_size - elems) * sizeof(struct ctx));
+	memset(ctx1 + dict_elems, 0, (dict_size - dict_elems) * sizeof(struct ctx));
 
-	for (size_t e = elems; e < dict_size; ++e) {
+	for (size_t e = dict_elems; e < dict_size; ++e) {
 		gr_init(&ctx1[e].gr, 0);
 	}
 }
@@ -402,16 +403,16 @@ void insert_elem(const struct elem *e)
 
 	assert(!is_zero(e));
 
-	if (elems >= dict_size) {
+	if (dict_elems >= dict_size) {
 		enlarge_dict();
 	}
 
-	assert(elems < dict_size);
+	assert(dict_elems < dict_size);
 
-	dict[elems] = *e;
-	dict[elems].tag = elems; /* element is filled except a tag, set the tag */
+	dict[dict_elems] = *e;
+	dict[dict_elems].tag = dict_elems; /* element is filled except a tag, set the tag */
 
-	elems++;
+	dict_elems++;
 }
 
 size_t find_in_dictionary(const char *p)
@@ -419,7 +420,7 @@ size_t find_in_dictionary(const char *p)
 	size_t best_len = 0;
 	size_t best_len_i;
 
-	for (size_t i = 0; i < elems; ++i) {
+	for (size_t i = 0; i < dict_elems; ++i) {
 		assert(dict[i].len > 0);
 
 		if (memcmp(p, dict[i].s, dict[i].len) == 0) {
@@ -443,17 +444,17 @@ size_t find_in_dictionary(const char *p)
 
 void update_dict(char *p)
 {
-	for (size_t i = 0; i < elems; ++i) {
+	for (size_t i = 0; i < dict_elems; ++i) {
 		assert(!is_zero(&dict[i]));
 
 		dict[i].cost = calc_cost(&dict[i], p);
 	}
 
-	qsort(dict, elems, sizeof(struct elem), elem_compar);
+	qsort(dict, dict_elems, sizeof(struct elem), elem_compar);
 
-	if (elems >= 2) {
+	if (dict_elems >= 2) {
 		assert(dict[0].cost <= dict[1].cost);
-		assert(dict[elems-2].cost <= dict[elems-1].cost);
+		assert(dict[dict_elems - 2].cost <= dict[dict_elems - 1].cost);
 	}
 }
 
@@ -545,7 +546,7 @@ void ctx_add_tag(struct ctx *c, size_t tag)
 
 int elem_query_dictionary(struct elem *e)
 {
-	for (size_t i = 0; i < elems; ++i) {
+	for (size_t i = 0; i < dict_elems; ++i) {
 		if (dict[i].len == e->len && memcmp(dict[i].s, e->s, e->len) == 0) {
 			return 1;
 		}
@@ -882,7 +883,7 @@ void compress(char *ptr, size_t size)
 
 void dump_dict()
 {
-	for (size_t i = 0; i < elems; ++i) {
+	for (size_t i = 0; i < dict_elems; ++i) {
 		printf("dict[%zu] = \"%.*s\" (len=%zu)\n", i, (int)dict[i].len, dict[i].s, dict[i].len);
 	}
 }
@@ -893,7 +894,7 @@ void destroy()
 	dump_dict();
 #endif
 
-	for (size_t e = 0; e < elems; ++e) {
+	for (size_t e = 0; e < dict_elems; ++e) {
 		free(ctx1[e].arr);
 	}
 	for (size_t e = 0; e < 65536; ++e) {
@@ -1033,7 +1034,7 @@ int main(int argc, char *argv[])
 		100.f * sizes[E_NEW] / stream_size
 	);
 
-	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_elems, elems, (size_t)65536, (size_t)256);
+	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_elems, dict_elems, (size_t)65536, (size_t)256);
 
 	return 0;
 }
