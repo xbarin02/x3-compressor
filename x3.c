@@ -86,7 +86,6 @@ struct gr gr_dict2;
 
 size_t dict_hit_count = 0;
 size_t stream_size = 0;
-size_t stream_size_raw = 0;
 size_t stream_size_raw_str = 0;
 size_t stream_size_gr = 0;
 
@@ -902,7 +901,7 @@ void compress(char *ptr, size_t size)
 			events[E_NEW]++;
 
 			stream_size += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
-			stream_size_raw += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
+			sizes[E_NEW] += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
 			stream_size_raw_str += 8 * len;
 		}
 	}
@@ -1034,14 +1033,14 @@ int main(int argc, char *argv[])
 
 	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), new %zu / %f%% (of which text %zu / %f%%)\n",
 		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
-		(stream_size_raw + 7) / 8, 100.f * stream_size_raw / stream_size,
+		(sizes[E_NEW] + 7) / 8, 100.f * sizes[E_NEW] / stream_size,
 		(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
 	);
 
 #if 1
-	printf("\x1b[37;1mcompression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
+	printf("\x1b[37;1mcompression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
 #else
-	printf("compression ratio: %f\n", size / (float)((stream_size_gr + stream_size_raw + 7) / 8));
+	printf("compression ratio: %f\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
 #endif
 
 	printf("number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
@@ -1053,7 +1052,7 @@ int main(int argc, char *argv[])
 		100.f * sizes[E_CTX3] / stream_size,
 		100.f * sizes[E_MISS1] / stream_size,
 		100.f * sizes[E_MISS2] / stream_size,
-		100.f * stream_size_raw / stream_size
+		100.f * sizes[E_NEW] / stream_size
 	);
 
 	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_elems, elems, (size_t)65536, (size_t)256);
