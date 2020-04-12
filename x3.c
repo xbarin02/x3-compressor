@@ -495,7 +495,7 @@ void gr_update(struct gr *gr, size_t symb)
 	gr->symb_cnt++;
 }
 
-void update_model(struct gr *gr, size_t delta)
+void gr_update_model(struct gr *gr, size_t delta)
 {
 	if (gr->symb_cnt == RESET_INTERVAL) {
 		gr_recalc_k(gr);
@@ -730,46 +730,44 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 	}
 	// mode = E_IDX1
 	if (mode == E_IDX1) {
-		update_model(&gr_idx1, index);
+		gr_update_model(&gr_idx1, index);
 	}
 	// mode = E_IDX2
 	if (mode == E_IDX2) {
-		update_model(&gr_idx2, index - pindex);
+		gr_update_model(&gr_idx2, index - pindex);
 	}
 
 	// update contexts
 
 	if (ctx_query_tag_item(c0, tag) == NULL) {
 		ctx_add_tag(c0, tag);
-		ctx_sort(c0);
 	} else {
 		ctx_item_inc_freq(c0, tag);
-		ctx_sort(c0);
 	}
+	ctx_sort(c0);
 
 	if (ctx_query_tag_item(c1, tag) == NULL) {
 		ctx_add_tag(c1, tag);
-		ctx_sort(c1);
 	} else {
 		ctx_item_inc_freq(c1, tag);
-		ctx_sort(c1);
 	}
+	ctx_sort(c1);
 
 	if (ctx_query_tag_item(c2, tag) == NULL) {
 		ctx_add_tag(c2, tag);
-		ctx_sort(c2);
 	} else {
 		ctx_item_inc_freq(c2, tag);
-		ctx_sort(c2);
 	}
+	ctx_sort(c2);
 
 	if (ctx_query_tag_item(c3, tag) == NULL) {
 		ctx_add_tag(c3, tag);
-		ctx_sort(c3);
 	} else {
 		ctx_item_inc_freq(c3, tag);
-		ctx_sort(c3);
 	}
+	ctx_sort(c3);
+
+	/* (context1, tag) constitutes new pair of tags */
 
 	struct tag_pair pair = make_tag_pair(context1, tag);
 
@@ -875,7 +873,7 @@ void compress(char *ptr, size_t size)
 
 			events[E_NEW]++;
 
-			sizes[E_NEW] += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len; /* 5 bits: 11111 */
+			sizes[E_NEW] += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len;
 			stream_size_raw_str += 8 * len;
 		}
 	}
