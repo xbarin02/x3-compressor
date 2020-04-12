@@ -81,8 +81,8 @@ struct ctx *ctx1 = NULL; /* previous tag */
 struct ctx ctx2[65536];  /* last two bytes */
 struct ctx ctx3[256];    /* last byte */
 
-struct gr gr_dict1; /* for E_MISS1 */
-struct gr gr_dict2; /* for E_MISS2 */
+struct gr gr_idx1; /* for E_IDX1 */
+struct gr gr_idx2; /* for E_IDX2 */
 
 size_t stream_size_raw_str = 0;
 
@@ -619,23 +619,23 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 	return size;
 }
 
-#define SIZEOF_BITCODE_CTX0  2
-#define SIZEOF_BITCODE_CTX1  1
-#define SIZEOF_BITCODE_CTX2  4
-#define SIZEOF_BITCODE_CTX3  6
-#define SIZEOF_BITCODE_MISS1 3
-#define SIZEOF_BITCODE_MISS2 5
-#define SIZEOF_BITCODE_NEW   6
+#define SIZEOF_BITCODE_CTX0 2
+#define SIZEOF_BITCODE_CTX1 1
+#define SIZEOF_BITCODE_CTX2 4
+#define SIZEOF_BITCODE_CTX3 6
+#define SIZEOF_BITCODE_IDX1 3
+#define SIZEOF_BITCODE_IDX2 5
+#define SIZEOF_BITCODE_NEW  6
 
 /* list of events */
 enum {
-	E_CTX0 = 0,  /* tag in ctx0 */
-	E_CTX1 = 1,  /* tag in ctx1 */
-	E_CTX2 = 2,  /* tag in ctx2 */
-	E_CTX3 = 3,  /* tag in ctx3 */
-	E_MISS1 = 4, /* index in miss1 */
-	E_MISS2 = 5, /* index miss2 */
-	E_NEW = 6    /* new index/tag (uncompressed) */
+	E_CTX0 = 0, /* tag in ctx0 */
+	E_CTX1 = 1, /* tag in ctx1 */
+	E_CTX2 = 2, /* tag in ctx2 */
+	E_CTX3 = 3, /* tag in ctx3 */
+	E_IDX1 = 4, /* index in miss1 */
+	E_IDX2 = 5, /* index miss2 */
+	E_NEW = 6   /* new index/tag (uncompressed) */
 };
 
 size_t events[7];
@@ -665,8 +665,8 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 
 	// find the best option
 
-	int mode = E_MISS1;
-	size_t size = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict1.opt_k, index);
+	int mode = E_IDX1;
+	size_t size = SIZEOF_BITCODE_IDX1 + bio_sizeof_gr(gr_idx1.opt_k, index);
 
 	if (ctx_query_tag_item(c0, tag) != NULL && SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag) < size) {
 		mode = E_CTX0;
@@ -684,9 +684,9 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 		mode = E_CTX3;
 		size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 	}
-	if (pindex != (size_t)-1 && index >= pindex && SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex) < size) {
-		mode = E_MISS2;
-		size = SIZEOF_BITCODE_MISS2 + bio_sizeof_gr(gr_dict2.opt_k, index - pindex);
+	if (pindex != (size_t)-1 && index >= pindex && SIZEOF_BITCODE_IDX2 + bio_sizeof_gr(gr_idx2.opt_k, index - pindex) < size) {
+		mode = E_IDX2;
+		size = SIZEOF_BITCODE_IDX2 + bio_sizeof_gr(gr_idx2.opt_k, index - pindex);
 	}
 
 	// encode
@@ -700,9 +700,9 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 			break;
 		case E_CTX3:
 			break;
-		case E_MISS1:
+		case E_IDX1:
 			break;
-		case E_MISS2:
+		case E_IDX2:
 			break;
 	}
 
@@ -727,13 +727,13 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 	if (ctx_query_tag_item(c3, tag) != NULL) {
 		ctx_encode_tag(c3, tag);
 	}
-	// mode = E_MISS1
-	if (mode == E_MISS1) {
-		update_model(&gr_dict1, index);
+	// mode = E_IDX1
+	if (mode == E_IDX1) {
+		update_model(&gr_idx1, index);
 	}
-	// mode = E_MISS2
-	if (mode == E_MISS2) {
-		update_model(&gr_dict2, index - pindex);
+	// mode = E_IDX2
+	if (mode == E_IDX2) {
+		update_model(&gr_idx2, index - pindex);
 	}
 
 	// update contexts
@@ -787,8 +787,8 @@ void create()
 {
 	enlarge_dict();
 
-	gr_init(&gr_dict1, 6);
-	gr_init(&gr_dict2, 0);
+	gr_init(&gr_idx1, 6);
+	gr_init(&gr_idx2, 0);
 
 	for (size_t e = 0; e < 65536; ++e) {
 		gr_init(&ctx2[e].gr, 0);
@@ -1000,10 +1000,10 @@ int main(int argc, char *argv[])
 
 	free(ptr);
 
-	size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_MISS1] + events[E_MISS2];
+	size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_IDX1] + events[E_IDX2];
 
-	size_t stream_size_gr = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_MISS1] + sizes[E_MISS2];
-	size_t stream_size = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_MISS1] + sizes[E_MISS2] + sizes[E_NEW];
+	size_t stream_size_gr = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2];
+	size_t stream_size = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2] + sizes[E_NEW];
 
 	printf("input stream size: %zu\n", size);
 	printf("output stream size: %zu\n", (stream_size + 7) / 8);
@@ -1022,14 +1022,14 @@ int main(int argc, char *argv[])
 #endif
 
 	printf("number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
-		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_MISS1], events[E_MISS2], events[E_NEW]);
+		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_IDX1], events[E_IDX2], events[E_NEW]);
 	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
 		100.f * sizes[E_CTX0] / stream_size,
 		100.f * sizes[E_CTX1] / stream_size,
 		100.f * sizes[E_CTX2] / stream_size,
 		100.f * sizes[E_CTX3] / stream_size,
-		100.f * sizes[E_MISS1] / stream_size,
-		100.f * sizes[E_MISS2] / stream_size,
+		100.f * sizes[E_IDX1] / stream_size,
+		100.f * sizes[E_IDX2] / stream_size,
 		100.f * sizes[E_NEW] / stream_size
 	);
 
