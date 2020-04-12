@@ -81,8 +81,8 @@ struct ctx *ctx1 = NULL;
 struct ctx ctx2[65536];
 struct ctx ctx3[256];
 
-struct gr gr_dict;
-struct gr gr_dict2;
+struct gr gr_dict1; /* for E_MISS1 */
+struct gr gr_dict2; /* for E_MISS2 */
 
 size_t stream_size_raw_str = 0;
 
@@ -686,7 +686,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 	// find best option
 
 	int mode = E_MISS1;
-	size_t size = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict.opt_k, index);
+	size_t size = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict1.opt_k, index);
 
 	if (ctx_query_tag_item(c0, tag) != NULL && SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag) < size) {
 		mode = E_CTX0;
@@ -748,7 +748,7 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 	}
 	// mode = 4
 	if (mode == E_MISS1) {
-		update_model(&gr_dict, index);
+		update_model(&gr_dict1, index);
 	}
 	// mode = 5
 	if (mode == E_MISS2) {
@@ -806,7 +806,7 @@ void create()
 {
 	enlarge_dict();
 
-	gr_init(&gr_dict, 6);
+	gr_init(&gr_dict1, 6);
 	gr_init(&gr_dict2, 0);
 
 	for (size_t e = 0; e < 65536; ++e) {
