@@ -76,10 +76,10 @@ size_t dict_size = 1;
 size_t elems = 0;
 
 struct elem *dict = NULL;
-struct ctx *ctx0 = NULL;
-struct ctx *ctx1 = NULL;
-struct ctx ctx2[65536];
-struct ctx ctx3[256];
+struct ctx *ctx0 = NULL; /* previous two tags */
+struct ctx *ctx1 = NULL; /* previous tag */
+struct ctx ctx2[65536];  /* last two bytes */
+struct ctx ctx3[256];    /* last byte */
 
 struct gr gr_dict1; /* for E_MISS1 */
 struct gr gr_dict2; /* for E_MISS2 */
@@ -619,71 +619,51 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 	return size;
 }
 
-#if 0
-#	define SIZEOF_BITCODE_CTX0 2 /* mode 0 */
-#	define SIZEOF_BITCODE_CTX1 3 /* mode 1 */
-#	define SIZEOF_BITCODE_CTX2 3 /* mode 2 */
-#	define SIZEOF_BITCODE_MISS1 2 /* mode 3 */
-#	define SIZEOF_BITCODE_CTX3 4 /* mode 4 */
-#	define SIZEOF_BITCODE_MISS2 5 /* mode 5 */
-#	define SIZEOF_BITCODE_NEW 5 /* uncompressed */
-#else
-#	define SIZEOF_BITCODE_CTX0  2
-#	define SIZEOF_BITCODE_CTX1  1
-#	define SIZEOF_BITCODE_CTX2  4
-#	define SIZEOF_BITCODE_CTX3  6
-#	define SIZEOF_BITCODE_MISS1 3
-#	define SIZEOF_BITCODE_MISS2 5
-#	define SIZEOF_BITCODE_NEW   6
-#endif
+#define SIZEOF_BITCODE_CTX0  2
+#define SIZEOF_BITCODE_CTX1  1
+#define SIZEOF_BITCODE_CTX2  4
+#define SIZEOF_BITCODE_CTX3  6
+#define SIZEOF_BITCODE_MISS1 3
+#define SIZEOF_BITCODE_MISS2 5
+#define SIZEOF_BITCODE_NEW   6
 
 /* list of events */
 enum {
-	E_CTX0 = 0,
-	E_CTX1 = 1,
-	E_CTX2 = 2,
-	E_CTX3 = 3,
-	E_MISS1 = 4,
-	E_MISS2 = 5,
-	E_NEW = 6
+	E_CTX0 = 0,  /* tag in ctx0 */
+	E_CTX1 = 1,  /* tag in ctx1 */
+	E_CTX2 = 2,  /* tag in ctx2 */
+	E_CTX3 = 3,  /* tag in ctx3 */
+	E_MISS1 = 4, /* index in miss1 */
+	E_MISS2 = 5, /* index miss2 */
+	E_NEW = 6    /* new index/tag (uncompressed) */
 };
 
-/*
- * [0] = tag in ctx0
- * [1] = tag in ctx1
- * [2] = tag in ctx2
- * [3] = tag in ctx3
- * [4] = tag in miss1
- * [5] = tag in miss2
- * [6] = new tag (uncompressed)
- */
 size_t events[7];
 
 size_t sizes[7];
 
 /* encode dict[index].tag in context, rather than index */
-void encode_tag(size_t context0, size_t context1, size_t context2, size_t index, size_t pindex)
+void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t index, size_t pindex)
 {
 	assert(ctx1 != NULL);
 
-	struct ctx *c1 = ctx1 + context1;
-	struct ctx *c2 = ctx2 + context2;
-	struct ctx *c3 = ctx3 + (context2 & 255);
-
 	size_t tag = dict[index].tag;
 
-	// tags: (context0, context1, tag)
-	struct tag_pair ctx_pair = make_tag_pair(context0, context1);
+	// order of tags is (prev_context1, context1, tag)
+	struct tag_pair ctx_pair = make_tag_pair(prev_context1, context1); /* previous two tags */
 
-	size_t ctx0_id = tag_pair_query(&ctx_pair);
+	size_t ctx0_id = tag_pair_query(&ctx_pair); /* convert (prev_context1, context1) to linear id */
 	if (ctx0_id == (size_t)-1) {
-		// not found context id
+		// not found context id, default to 0
 		ctx0_id = 0;
 	}
 
 	struct ctx *c0 = ctx0 + ctx0_id;
+	struct ctx *c1 = ctx1 + context1;
+	struct ctx *c2 = ctx2 + context2;
+	struct ctx *c3 = ctx3 + (context2 & 255);
 
-	// find best option
+	// find the best option
 
 	int mode = E_MISS1;
 	size_t size = SIZEOF_BITCODE_MISS1 + bio_sizeof_gr(gr_dict1.opt_k, index);
@@ -710,8 +690,6 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 	}
 
 	// encode
-	events[mode]++;
-	sizes[mode] += size;
 
 	switch (mode) {
 		case E_CTX0:
@@ -728,29 +706,32 @@ void encode_tag(size_t context0, size_t context1, size_t context2, size_t index,
 			break;
 	}
 
-	// update models in all contexts
+	events[mode]++;
+	sizes[mode] += size;
 
-	// mode = 0
+	// update Golomb-Rice models
+
+	// mode = E_CTX0
 	if (ctx_query_tag_item(c0, tag) != NULL) {
 		ctx_encode_tag(c0, tag);
 	}
-	// mode = 1
+	// mode = E_CTX1
 	if (ctx_query_tag_item(c1, tag) != NULL) {
 		ctx_encode_tag(c1, tag);
 	}
-	// mode = 2
+	// mode = E_CTX2
 	if (ctx_query_tag_item(c2, tag) != NULL) {
 		ctx_encode_tag(c2, tag);
 	}
-	// mode = 3
+	// mode = E_CTX3
 	if (ctx_query_tag_item(c3, tag) != NULL) {
 		ctx_encode_tag(c3, tag);
 	}
-	// mode = 4
+	// mode = E_MISS1
 	if (mode == E_MISS1) {
 		update_model(&gr_dict1, index);
 	}
-	// mode = 5
+	// mode = E_MISS2
 	if (mode == E_MISS2) {
 		update_model(&gr_dict2, index - pindex);
 	}
@@ -824,7 +805,7 @@ void compress(char *ptr, size_t size)
 {
 	char *end = ptr + size;
 
-	size_t context0 = 0; /* previous context1 */
+	size_t prev_context1 = 0; /* previous context1 */
 	size_t context1 = 0; /* last tag */
 	size_t context2 = 0; /* last two bytes */
 	size_t pindex = (size_t)-1; /* previous index */
@@ -841,9 +822,9 @@ void compress(char *ptr, size_t size)
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
 
-			encode_tag(context0, context1, context2, index, pindex);
+			encode_tag(prev_context1, context1, context2, index, pindex);
 
-			context0 = context1;
+			prev_context1 = context1;
 			context1 = dict[index].tag;
 
 			dict[index].last_pos = p;
@@ -880,7 +861,7 @@ void compress(char *ptr, size_t size)
 
 			p += len;
 
-			context0 = 0;
+			prev_context1 = 0;
 			context1 = 0;
 
 			if (p >= ptr + 2) {
