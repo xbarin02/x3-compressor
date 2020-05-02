@@ -193,7 +193,32 @@ void gr_init(struct gr *gr, size_t k)
 	gr->symb_cnt = 0;
 }
 
-void enlarge_dict()
+size_t dict_get_size()
+{
+	return dict_size;
+}
+
+size_t dict_get_elems()
+{
+	return dict_elems;
+}
+
+void enlarge_ctx1()
+{
+	ctx1 = realloc(ctx1, dict_get_size() * sizeof(struct ctx));
+
+	if (ctx1 == NULL) {
+		abort();
+	}
+
+	memset(ctx1 + dict_get_elems(), 0, (dict_get_size() - dict_get_elems()) * sizeof(struct ctx));
+
+	for (size_t e = dict_get_elems(); e < dict_get_size(); ++e) {
+		gr_init(&ctx1[e].gr, 0);
+	}
+}
+
+void dict_enlarge()
 {
 	dict_logsize++;
 	dict_size = (size_t)1 << dict_logsize;
@@ -203,21 +228,9 @@ void enlarge_dict()
 	if (dict == NULL) {
 		abort();
 	}
-
-	ctx1 = realloc(ctx1, dict_size * sizeof(struct ctx));
-
-	if (ctx1 == NULL) {
-		abort();
-	}
-
-	memset(ctx1 + dict_elems, 0, (dict_size - dict_elems) * sizeof(struct ctx));
-
-	for (size_t e = dict_elems; e < dict_size; ++e) {
-		gr_init(&ctx1[e].gr, 0);
-	}
 }
 
-size_t calc_cost(struct elem *e, char *curr_pos)
+size_t elem_calc_cost(struct elem *e, char *curr_pos)
 {
 	assert(e != NULL);
 
@@ -230,7 +243,7 @@ size_t calc_cost(struct elem *e, char *curr_pos)
 	return cost;
 }
 
-void fill_elem(struct elem *e, char *p, size_t len)
+void elem_fill(struct elem *e, char *p, size_t len)
 {
 	assert(e != NULL);
 
@@ -256,19 +269,20 @@ static int elem_compar(const void *l, const void *r)
 	return 0;
 }
 
-int is_zero(const struct elem *e)
+int elem_is_zero(const struct elem *e)
 {
 	return e->len == 0;
 }
 
-void insert_elem(const struct elem *e)
+void dict_insert_elem(const struct elem *e)
 {
 	assert(e != NULL);
 
-	assert(!is_zero(e));
+	assert(!elem_is_zero(e));
 
 	if (dict_elems >= dict_size) {
-		enlarge_dict();
+		dict_enlarge();
+		enlarge_ctx1();
 	}
 
 	assert(dict_elems < dict_size);
@@ -279,7 +293,7 @@ void insert_elem(const struct elem *e)
 	dict_elems++;
 }
 
-size_t find_in_dictionary(const char *p)
+size_t dict_find_match(const char *p)
 {
 	size_t best_len = 0;
 	size_t best_len_i;
@@ -306,12 +320,12 @@ size_t find_in_dictionary(const char *p)
 	return (size_t)-1; /* not found */
 }
 
-void update_dict(char *p)
+void dict_update_costs(char *p)
 {
 	for (size_t i = 0; i < dict_elems; ++i) {
-		assert(!is_zero(&dict[i]));
+		assert(!elem_is_zero(&dict[i]));
 
-		dict[i].cost = calc_cost(&dict[i], p);
+		dict[i].cost = elem_calc_cost(&dict[i], p);
 	}
 
 	qsort(dict, dict_elems, sizeof(struct elem), elem_compar);
@@ -408,7 +422,7 @@ void ctx_add_tag(struct ctx *c, size_t tag)
 	c->arr[c->items - 1].freq = 1;
 }
 
-int elem_query_dictionary(struct elem *e)
+int dict_query_elem(struct elem *e)
 {
 	for (size_t i = 0; i < dict_elems; ++i) {
 		if (dict[i].len == e->len && memcmp(dict[i].s, e->s, e->len) == 0) {
@@ -507,12 +521,22 @@ size_t events[7];
 
 size_t sizes[7];
 
+size_t dict_get_len_by_index(size_t index)
+{
+	return dict[index].len;
+}
+
+size_t dict_get_tag_by_index(size_t index)
+{
+	return dict[index].tag;
+}
+
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t index, size_t pindex)
 {
 	assert(ctx1 != NULL);
 
-	size_t tag = dict[index].tag;
+	size_t tag = dict_get_tag_by_index(index);
 
 	// order of tags is (prev_context1, context1, tag)
 	struct tag_pair ctx_pair = make_tag_pair(prev_context1, context1); /* previous two tags */
@@ -648,7 +672,8 @@ size_t make_context2(char *p)
 
 void create()
 {
-	enlarge_dict();
+	dict_enlarge();
+	enlarge_ctx1();
 
 	gr_init(&gr_idx1, 6);
 	gr_init(&gr_idx2, 0);
@@ -664,6 +689,11 @@ void create()
 	tag_pair_init();
 }
 
+void dict_set_last_pos(size_t index, char *p)
+{
+	dict[index].last_pos = p;
+}
+
 void compress(char *ptr, size_t size)
 {
 	char *end = ptr + size;
@@ -675,11 +705,11 @@ void compress(char *ptr, size_t size)
 
 	for (char *p = ptr; p < end; ) {
 		/* (1) look into dictionary */
-		size_t index = find_in_dictionary(p);
+		size_t index = dict_find_match(p);
 
 		if (index != (size_t)-1 && dict[index].len >= find_best_match(p)) {
 			/* found in dictionary */
-			size_t len = dict[index].len;
+			size_t len = dict_get_len_by_index(index);
 
 #if 0
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
@@ -688,9 +718,9 @@ void compress(char *ptr, size_t size)
 			encode_tag(prev_context1, context1, context2, index, pindex);
 
 			prev_context1 = context1;
-			context1 = dict[index].tag;
+			context1 = dict_get_tag_by_index(index);
 
-			dict[index].last_pos = p;
+			dict_set_last_pos(index, p);
 
 			p += len;
 
@@ -699,7 +729,7 @@ void compress(char *ptr, size_t size)
 			}
 
 			/* recalc all costs, sort */
-			update_dict(p);
+			dict_update_costs(p);
 
 			pindex = index;
 		} else {
@@ -716,11 +746,11 @@ void compress(char *ptr, size_t size)
 #endif
 
 			struct elem e;
-			fill_elem(&e, p, len);
+			elem_fill(&e, p, len);
 
-			assert(elem_query_dictionary(&e) == 0);
+			assert(dict_query_elem(&e) == 0);
 
-			insert_elem(&e);
+			dict_insert_elem(&e);
 
 			p += len;
 
@@ -731,7 +761,7 @@ void compress(char *ptr, size_t size)
 				context2 = make_context2(p);
 			}
 
-			update_dict(p);
+			dict_update_costs(p);
 
 			pindex = (size_t)-1;
 
@@ -743,7 +773,7 @@ void compress(char *ptr, size_t size)
 	}
 }
 
-void dump_dict()
+void dict_dump()
 {
 	for (size_t i = 0; i < dict_elems; ++i) {
 		printf("dict[%zu] = \"%.*s\" (len=%zu)\n", i, (int)dict[i].len, dict[i].s, dict[i].len);
@@ -753,7 +783,7 @@ void dump_dict()
 void destroy()
 {
 #if 0
-	dump_dict();
+	dict_dump();
 #endif
 
 	for (size_t e = 0; e < dict_elems; ++e) {
