@@ -27,7 +27,11 @@ void set_num_threads(int n)
 
 int get_num_threads()
 {
+#ifdef _OPENMP
 	return g_num_threads;
+#else
+	return 1;
+#endif
 }
 
 /* found empirically */
@@ -43,7 +47,7 @@ int get_max_match_count()
 	return g_max_match_count;
 }
 
-static int pow2_p(size_t n)
+int pow2_p(size_t n)
 {
 	return (n & (n - 1)) == 0;
 }

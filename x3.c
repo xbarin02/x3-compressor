@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 2
+#define _POSIX_C_SOURCE 199309L
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -857,9 +857,7 @@ int main(int argc, char *argv[])
 
 	printf("max match count: %i\n", get_max_match_count());
 	printf("forward window: %zu\n", get_forward_window());
-#ifdef _OPENMP
 	printf("threads: %i\n", get_num_threads());
-#endif
 
 	printf("path: %s\n", path);
 
