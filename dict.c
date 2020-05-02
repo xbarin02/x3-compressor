@@ -79,18 +79,20 @@ int elem_is_zero(const struct elem *e)
 	return e->len == 0;
 }
 
-int dict_insert_elem(const struct elem *e)
+int dict_can_insert_elem()
 {
-	int reall = 0;
+	if (dict_elems >= dict_size) {
+		return 0; /* must enlarge */
+	}
 
+	return 1;
+}
+
+void dict_insert_elem(const struct elem *e)
+{
 	assert(e != NULL);
 
 	assert(!elem_is_zero(e));
-
-	if (dict_elems >= dict_size) {
-		dict_enlarge();
-		reall = 1;
-	}
 
 	assert(dict_elems < dict_size);
 
@@ -98,8 +100,6 @@ int dict_insert_elem(const struct elem *e)
 	dict[dict_elems].tag = dict_elems; /* element is filled except a tag, set the tag */
 
 	dict_elems++;
-
-	return reall;
 }
 
 size_t dict_find_match(const char *p)

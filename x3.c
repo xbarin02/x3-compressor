@@ -177,7 +177,7 @@ void gr_init(struct gr *gr, size_t k)
 	gr->symb_cnt = 0;
 }
 
-void enlarge_ctx1(size_t elems)
+void enlarge_ctx1()
 {
 	ctx1 = realloc(ctx1, dict_get_size() * sizeof(struct ctx));
 
@@ -187,9 +187,9 @@ void enlarge_ctx1(size_t elems)
 
 	/* dict_get_elems has been already incremented */
 
-	memset(ctx1 + elems, 0, (dict_get_size() - elems) * sizeof(struct ctx));
+	memset(ctx1 + dict_get_elems(), 0, (dict_get_size() - dict_get_elems()) * sizeof(struct ctx));
 
-	for (size_t e = elems; e < dict_get_size(); ++e) {
+	for (size_t e = dict_get_elems(); e < dict_get_size(); ++e) {
 		gr_init(&ctx1[e].gr, 0);
 	}
 }
@@ -510,7 +510,7 @@ size_t make_context2(char *p)
 void create()
 {
 	dict_enlarge();
-	enlarge_ctx1(dict_get_elems());
+	enlarge_ctx1();
 
 	gr_init(&gr_idx1, 6);
 	gr_init(&gr_idx2, 0);
@@ -582,9 +582,12 @@ void compress(char *ptr, size_t size)
 
 			assert(dict_query_elem(&e) == 0);
 
-			if (dict_insert_elem(&e)) {
-				enlarge_ctx1(dict_get_elems() - 1);
+			if (!dict_can_insert_elem()) {
+				dict_enlarge();
+				enlarge_ctx1();
 			}
+
+			dict_insert_elem(&e);
 
 			p += len;
 

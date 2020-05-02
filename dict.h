@@ -22,7 +22,9 @@ size_t elem_calc_cost(struct elem *e, char *curr_pos);
 
 void elem_fill(struct elem *e, char *p, size_t len);
 
-int dict_insert_elem(const struct elem *e);
+int dict_can_insert_elem();
+
+void dict_insert_elem(const struct elem *e);
 
 size_t dict_find_match(const char *p);
 
