@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <time.h>
 #include "backend.h"
+#include "file.h"
 
 /* recompute Golomb-Rice codes after... */
 #define RESET_INTERVAL 256
@@ -183,39 +184,6 @@ size_t tag_pair_add(struct tag_pair *pair)
 	tag_pair_elems++;
 
 	return tag_pair_elems - 1;
-}
-
-void fload(void *ptr, size_t size, FILE *stream)
-{
-	if (fread(ptr, 1, size, stream) < size) {
-		abort();
-	}
-}
-
-size_t fsize(FILE *stream)
-{
-	long begin = ftell(stream);
-
-	if (begin == (long)-1) {
-		fprintf(stderr, "Stream is not seekable\n");
-		abort();
-	}
-
-	if (fseek(stream, 0, SEEK_END)) {
-		abort();
-	}
-
-	long end = ftell(stream);
-
-	if (end == (long)-1) {
-		abort();
-	}
-
-	if (fseek(stream, begin, SEEK_SET)) {
-		abort();
-	}
-
-	return (size_t)end - (size_t)begin;
 }
 
 void gr_init(struct gr *gr, size_t k)
