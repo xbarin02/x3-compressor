@@ -9,17 +9,10 @@
 #include <time.h>
 #include "backend.h"
 #include "file.h"
+#include "dict.h"
 
 /* recompute Golomb-Rice codes after... */
 #define RESET_INTERVAL 256
-
-struct elem {
-	char s[MAX_MATCH_LEN]; /* the string */
-	size_t len; /* of the length */
-	char *last_pos; /* recently seen at the position */
-	size_t cost; /* sort key */
-	size_t tag; /* id */
-};
 
 struct item {
 	size_t tag;
@@ -52,15 +45,6 @@ struct tag_pair {
 struct tag_pair *map0 = NULL; /* root of tree */
 size_t tag_pair_elems = 0;
 size_t tag_pair_size = 1; /* allocated */
-
-/* allocated size, enlarged logarithmically */
-size_t dict_logsize = 0;
-size_t dict_size = 1;
-
-/* number of elements in the dictionary */
-size_t dict_elems = 0;
-
-struct elem *dict = NULL; /* the dictionary, sorted by distance = curr_pos - dict[i]->last_pos */
 
 struct ctx *ctx0 = NULL; /* previous two tags */
 struct ctx *ctx1 = NULL; /* previous tag */
@@ -193,17 +177,7 @@ void gr_init(struct gr *gr, size_t k)
 	gr->symb_cnt = 0;
 }
 
-size_t dict_get_size()
-{
-	return dict_size;
-}
-
-size_t dict_get_elems()
-{
-	return dict_elems;
-}
-
-void enlarge_ctx1()
+void enlarge_ctx1(size_t elems)
 {
 	ctx1 = realloc(ctx1, dict_get_size() * sizeof(struct ctx));
 
@@ -211,128 +185,12 @@ void enlarge_ctx1()
 		abort();
 	}
 
-	memset(ctx1 + dict_get_elems(), 0, (dict_get_size() - dict_get_elems()) * sizeof(struct ctx));
+	/* dict_get_elems has been already incremented */
 
-	for (size_t e = dict_get_elems(); e < dict_get_size(); ++e) {
+	memset(ctx1 + elems, 0, (dict_get_size() - elems) * sizeof(struct ctx));
+
+	for (size_t e = elems; e < dict_get_size(); ++e) {
 		gr_init(&ctx1[e].gr, 0);
-	}
-}
-
-void dict_enlarge()
-{
-	dict_logsize++;
-	dict_size = (size_t)1 << dict_logsize;
-
-	dict = realloc(dict, dict_size * sizeof(struct elem));
-
-	if (dict == NULL) {
-		abort();
-	}
-}
-
-size_t elem_calc_cost(struct elem *e, char *curr_pos)
-{
-	assert(e != NULL);
-
-	assert(curr_pos >= e->last_pos);
-
-	size_t dist = curr_pos - e->last_pos;
-
-	size_t cost = dist;
-
-	return cost;
-}
-
-void elem_fill(struct elem *e, char *p, size_t len)
-{
-	assert(e != NULL);
-
-	memcpy(e->s, p, len);
-	e->len = len;
-
-	e->last_pos = p;
-}
-
-static int elem_compar(const void *l, const void *r)
-{
-	const struct elem *le = l;
-	const struct elem *re = r;
-
-	if (le->cost > re->cost) {
-		return +1;
-	}
-
-	if (le->cost < re->cost) {
-		return -1;
-	}
-
-	return 0;
-}
-
-int elem_is_zero(const struct elem *e)
-{
-	return e->len == 0;
-}
-
-void dict_insert_elem(const struct elem *e)
-{
-	assert(e != NULL);
-
-	assert(!elem_is_zero(e));
-
-	if (dict_elems >= dict_size) {
-		dict_enlarge();
-		enlarge_ctx1();
-	}
-
-	assert(dict_elems < dict_size);
-
-	dict[dict_elems] = *e;
-	dict[dict_elems].tag = dict_elems; /* element is filled except a tag, set the tag */
-
-	dict_elems++;
-}
-
-size_t dict_find_match(const char *p)
-{
-	size_t best_len = 0;
-	size_t best_len_i;
-
-	for (size_t i = 0; i < dict_elems; ++i) {
-		assert(dict[i].len > 0);
-
-		if (memcmp(p, dict[i].s, dict[i].len) == 0) {
-			/* match */
-#if 0
-			printf("dictionary match @ [%i] len %zu\n", i, dict[i].len);
-#endif
-			if (dict[i].len > best_len) {
-				best_len = dict[i].len;
-				best_len_i = i;
-			}
-		}
-	}
-
-	if (best_len > 0) {
-		return best_len_i;
-	}
-
-	return (size_t)-1; /* not found */
-}
-
-void dict_update_costs(char *p)
-{
-	for (size_t i = 0; i < dict_elems; ++i) {
-		assert(!elem_is_zero(&dict[i]));
-
-		dict[i].cost = elem_calc_cost(&dict[i], p);
-	}
-
-	qsort(dict, dict_elems, sizeof(struct elem), elem_compar);
-
-	if (dict_elems >= 2) {
-		assert(dict[0].cost <= dict[1].cost);
-		assert(dict[dict_elems - 2].cost <= dict[dict_elems - 1].cost);
 	}
 }
 
@@ -422,17 +280,6 @@ void ctx_add_tag(struct ctx *c, size_t tag)
 	c->arr[c->items - 1].freq = 1;
 }
 
-int dict_query_elem(struct elem *e)
-{
-	for (size_t i = 0; i < dict_elems; ++i) {
-		if (dict[i].len == e->len && memcmp(dict[i].s, e->s, e->len) == 0) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
 int item_compar(const void *l, const void *r)
 {
 	const struct item *li = l;
@@ -520,16 +367,6 @@ enum {
 size_t events[7];
 
 size_t sizes[7];
-
-size_t dict_get_len_by_index(size_t index)
-{
-	return dict[index].len;
-}
-
-size_t dict_get_tag_by_index(size_t index)
-{
-	return dict[index].tag;
-}
 
 /* encode dict[index].tag in context, rather than index */
 void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t index, size_t pindex)
@@ -673,7 +510,7 @@ size_t make_context2(char *p)
 void create()
 {
 	dict_enlarge();
-	enlarge_ctx1();
+	enlarge_ctx1(dict_get_elems());
 
 	gr_init(&gr_idx1, 6);
 	gr_init(&gr_idx2, 0);
@@ -689,11 +526,6 @@ void create()
 	tag_pair_init();
 }
 
-void dict_set_last_pos(size_t index, char *p)
-{
-	dict[index].last_pos = p;
-}
-
 void compress(char *ptr, size_t size)
 {
 	char *end = ptr + size;
@@ -707,7 +539,7 @@ void compress(char *ptr, size_t size)
 		/* (1) look into dictionary */
 		size_t index = dict_find_match(p);
 
-		if (index != (size_t)-1 && dict[index].len >= find_best_match(p)) {
+		if (index != (size_t)-1 && dict_get_len_by_index(index) >= find_best_match(p)) {
 			/* found in dictionary */
 			size_t len = dict_get_len_by_index(index);
 
@@ -750,7 +582,9 @@ void compress(char *ptr, size_t size)
 
 			assert(dict_query_elem(&e) == 0);
 
-			dict_insert_elem(&e);
+			if (dict_insert_elem(&e)) {
+				enlarge_ctx1(dict_get_elems() - 1);
+			}
 
 			p += len;
 
@@ -773,20 +607,13 @@ void compress(char *ptr, size_t size)
 	}
 }
 
-void dict_dump()
-{
-	for (size_t i = 0; i < dict_elems; ++i) {
-		printf("dict[%zu] = \"%.*s\" (len=%zu)\n", i, (int)dict[i].len, dict[i].s, dict[i].len);
-	}
-}
-
 void destroy()
 {
 #if 0
 	dict_dump();
 #endif
 
-	for (size_t e = 0; e < dict_elems; ++e) {
+	for (size_t e = 0; e < dict_get_elems(); ++e) {
 		free(ctx1[e].arr);
 	}
 	for (size_t e = 0; e < 65536; ++e) {
@@ -796,7 +623,7 @@ void destroy()
 		free(ctx3[e].arr);
 	}
 	free(ctx1);
-	free(dict);
+	dict_destroy();
 
 	for (size_t e = 0; e < tag_pair_elems; ++e) {
 		free(ctx0[e].arr);
@@ -924,7 +751,7 @@ int main(int argc, char *argv[])
 		100.f * sizes[E_NEW] / stream_size
 	);
 
-	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_elems, dict_elems, (size_t)65536, (size_t)256);
+	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_elems, dict_get_elems(), (size_t)65536, (size_t)256);
 
 	return 0;
 }
