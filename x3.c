@@ -10,20 +10,11 @@
 #include "backend.h"
 #include "file.h"
 #include "dict.h"
-
-/* recompute Golomb-Rice codes after... */
-#define RESET_INTERVAL 256
+#include "gr.h"
 
 struct item {
 	size_t tag;
 	size_t freq; /* used n-times */
-};
-
-struct gr {
-	size_t opt_k;
-	/* mean = symb_sum / symb_count */
-	size_t symb_sum;
-	size_t symb_cnt;
 };
 
 struct ctx {
@@ -170,13 +161,6 @@ size_t tag_pair_add(struct tag_pair *pair)
 	return tag_pair_elems - 1;
 }
 
-void gr_init(struct gr *gr, size_t k)
-{
-	gr->opt_k = k;
-	gr->symb_sum = 0;
-	gr->symb_cnt = 0;
-}
-
 void enlarge_ctx1()
 {
 	ctx1 = realloc(ctx1, dict_get_size() * sizeof(struct ctx));
@@ -192,54 +176,6 @@ void enlarge_ctx1()
 	for (size_t e = dict_get_elems(); e < dict_get_size(); ++e) {
 		gr_init(&ctx1[e].gr, 0);
 	}
-}
-
-size_t bio_sizeof_gr(size_t k, size_t N)
-{
-	size_t size;
-	size_t Q = N >> k;
-
-	size = Q + 1;
-
-	size += k;
-
-	return size;
-}
-
-size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
-{
-	if (symb_cnt == 0) {
-		return 0;
-	}
-
-	int k;
-
-	for (k = 1; (symb_cnt << k) <= symb_sum; ++k)
-		;
-
-	return (size_t)(k - 1);
-}
-
-void gr_recalc_k(struct gr *gr)
-{
-	gr->opt_k = get_opt_k(gr->symb_sum, gr->symb_cnt);
-}
-
-void gr_update(struct gr *gr, size_t symb)
-{
-	gr->symb_sum += symb;
-	gr->symb_cnt++;
-}
-
-void gr_update_model(struct gr *gr, size_t delta)
-{
-	if (gr->symb_cnt == RESET_INTERVAL) {
-		gr_recalc_k(gr);
-
-		gr_init(gr, gr->opt_k);
-	}
-
-	gr_update(gr, delta);
 }
 
 struct item *ctx_query_tag_item(struct ctx *c, size_t tag)
