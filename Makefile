@@ -30,6 +30,8 @@ endif
 .PHONY: all
 all: $(BIN)
 
+x3: x3.o backend.o
+
 .PHONY: clean
 clean:
 	-$(RM) -- *.o $(BIN)
