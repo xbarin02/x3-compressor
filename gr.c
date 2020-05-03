@@ -1,4 +1,7 @@
 #include "gr.h"
+#include "bio.h"
+#include <assert.h>
+#include <stdint.h>
 
 /* recompute Golomb-Rice codes after... */
 #define RESET_INTERVAL 256
@@ -8,18 +11,6 @@ void gr_init(struct gr *gr, size_t k)
 	gr->opt_k = k;
 	gr->symb_sum = 0;
 	gr->symb_cnt = 0;
-}
-
-size_t bio_sizeof_gr(size_t k, size_t N)
-{
-	size_t size;
-	size_t Q = N >> k;
-
-	size = Q + 1;
-
-	size += k;
-
-	return size;
 }
 
 size_t get_opt_k(size_t symb_sum, size_t symb_cnt)
@@ -60,5 +51,7 @@ void gr_update_model(struct gr *gr, size_t symb)
 
 size_t gr_sizeof_symb(struct gr *gr, size_t symb)
 {
-	return bio_sizeof_gr(gr->opt_k, symb);
+	assert(symb <= UINT32_MAX);
+
+	return bio_sizeof_gr(gr->opt_k, (uint32_t)symb);
 }
