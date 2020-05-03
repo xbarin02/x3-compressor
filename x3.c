@@ -156,6 +156,18 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 	return size;
 }
 
+void ctx_encode_tag_without_update(struct bio *bio, struct ctx *ctx, size_t tag)
+{
+	if (ctx->items > 1) {
+		gr_recalc_k(&ctx->gr);
+		size_t item_index = ctx_query_tag_index(ctx, tag);
+		assert(item_index <= UINT32_MAX);
+		bio_write_gr(bio, ctx->gr.opt_k, (uint32_t)item_index);
+	} else {
+		/* no information needed */
+	}
+}
+
 void ctx0_realloc()
 {
 	ctx0 = realloc(ctx0, tag_pair_get_size() * sizeof(struct ctx));
@@ -242,19 +254,19 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 	switch (mode) {
 		case E_CTX0:
 			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX0 - 1);
-			/* TODO ctx_sizeof_tag(c0, tag) */
+			ctx_encode_tag_without_update(bio, c0, tag);
 			break;
 		case E_CTX1:
 			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX1 - 1);
-			/* TODO */
+			ctx_encode_tag_without_update(bio, c1, tag);
 			break;
 		case E_CTX2:
 			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX2 - 1);
-			/* TODO */
+			ctx_encode_tag_without_update(bio, c2, tag);
 			break;
 		case E_CTX3:
 			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX3 - 1);
-			/* TODO */
+			ctx_encode_tag_without_update(bio, c3, tag);
 			break;
 		case E_IDX1:
 			bio_write_gr(bio, 0, SIZEOF_BITCODE_IDX1 - 1);
