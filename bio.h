@@ -9,7 +9,12 @@ enum {
 	BIO_MODE_WRITE
 };
 
-struct bio;
+struct bio {
+	uint32_t *ptr; /* pointer to memory */
+	void *end;
+	uint32_t b;    /* bit buffer */
+	size_t c;      /* bit counter */
+};
 
 void bio_open(struct bio *bio, void *ptr, void *end, int mode);
 
