@@ -238,45 +238,52 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 	int mode; /* for stats */
 	size_t tag;
 	size_t index;
+	size_t size; /* for stats */
 	switch (decision) {
 		case SIZEOF_BITCODE_CTX0:
 			tag = ctx_decode_tag_without_update(bio, c0);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX0;
+			size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
 			break;
 		case SIZEOF_BITCODE_CTX1:
 			tag = ctx_decode_tag_without_update(bio, c1);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX1;
+			size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
 			break;
 		case SIZEOF_BITCODE_CTX2:
 			tag = ctx_decode_tag_without_update(bio, c2);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX2;
+			size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 			break;
 		case SIZEOF_BITCODE_CTX3:
 			tag = ctx_decode_tag_without_update(bio, c3);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX3;
+			size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 			break;
 		case SIZEOF_BITCODE_IDX1:
 			// bio_write_gr(bio, gr_idx1.opt_k, (uint32_t)index);
 			index = (size_t)bio_read_gr(bio, gr_idx1.opt_k);
 			tag = dict_get_tag_by_index(index);
 			mode = E_IDX1;
+			size = SIZEOF_BITCODE_IDX1 + gr_sizeof_symb(&gr_idx1, index);
 			break;
 		case SIZEOF_BITCODE_IDX2:
 			// bio_write_gr(bio, gr_idx2.opt_k, (uint32_t)(index - pindex));
 			index = (size_t)bio_read_gr(bio, gr_idx2.opt_k) + pindex;
 			tag = dict_get_tag_by_index(index);
 			mode = E_IDX2;
+			size = SIZEOF_BITCODE_IDX2 + gr_sizeof_symb(&gr_idx2, index - pindex);
 			break;
 		default:
 			abort();
 	}
 
 	events[mode]++;
-// 	sizes[mode] += size;
+	sizes[mode] += size;
 
 	// update Golomb-Rice models
 
