@@ -131,7 +131,7 @@ size_t ctx_encode_tag(struct ctx *ctx, size_t tag)
 	if (ctx->items > 1) {
 		gr_recalc_k(&ctx->gr);
 		size_t item_index = ctx_query_tag_index(ctx, tag);
-		size += bio_sizeof_gr(ctx->gr.opt_k, item_index);
+		size += gr_sizeof_symb(&ctx->gr, item_index);
 		gr_update(&ctx->gr, item_index);
 	} else {
 		size += 0; /* no information needed */
@@ -147,7 +147,7 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag)
 	if (ctx->items > 1) {
 		gr_recalc_k(&ctx->gr);
 		size_t item_index = ctx_query_tag_index(ctx, tag);
-		size += bio_sizeof_gr(ctx->gr.opt_k, item_index);
+		size += gr_sizeof_symb(&ctx->gr, item_index);
 	} else {
 		size += 0; /* no information needed */
 	}
@@ -213,7 +213,7 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 	// find the best option
 
 	int mode = E_IDX1;
-	size_t size = SIZEOF_BITCODE_IDX1 + bio_sizeof_gr(gr_idx1.opt_k, index);
+	size_t size = SIZEOF_BITCODE_IDX1 + gr_sizeof_symb(&gr_idx1, index);
 
 	if (ctx_query_tag_item(c0, tag) != NULL && SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag) < size) {
 		mode = E_CTX0;
@@ -231,9 +231,9 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 		mode = E_CTX3;
 		size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 	}
-	if (pindex != (size_t)-1 && index >= pindex && SIZEOF_BITCODE_IDX2 + bio_sizeof_gr(gr_idx2.opt_k, index - pindex) < size) {
+	if (pindex != (size_t)-1 && index >= pindex && SIZEOF_BITCODE_IDX2 + gr_sizeof_symb(&gr_idx2, index - pindex) < size) {
 		mode = E_IDX2;
-		size = SIZEOF_BITCODE_IDX2 + bio_sizeof_gr(gr_idx2.opt_k, index - pindex);
+		size = SIZEOF_BITCODE_IDX2 + gr_sizeof_symb(&gr_idx2, index - pindex);
 	}
 
 	// encode

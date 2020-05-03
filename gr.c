@@ -47,7 +47,7 @@ void gr_update(struct gr *gr, size_t symb)
 	gr->symb_cnt++;
 }
 
-void gr_update_model(struct gr *gr, size_t delta)
+void gr_update_model(struct gr *gr, size_t symb)
 {
 	if (gr->symb_cnt == RESET_INTERVAL) {
 		gr_recalc_k(gr);
@@ -55,5 +55,10 @@ void gr_update_model(struct gr *gr, size_t delta)
 		gr_init(gr, gr->opt_k);
 	}
 
-	gr_update(gr, delta);
+	gr_update(gr, symb);
+}
+
+size_t gr_sizeof_symb(struct gr *gr, size_t symb)
+{
+	return bio_sizeof_gr(gr->opt_k, symb);
 }

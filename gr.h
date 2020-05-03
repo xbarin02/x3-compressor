@@ -12,12 +12,12 @@ struct gr {
 
 void gr_init(struct gr *gr, size_t k);
 
-size_t bio_sizeof_gr(size_t k, size_t N);
+size_t gr_sizeof_symb(struct gr *gr, size_t symb);
 
 void gr_recalc_k(struct gr *gr);
 
 void gr_update(struct gr *gr, size_t symb);
 
-void gr_update_model(struct gr *gr, size_t delta);
+void gr_update_model(struct gr *gr, size_t symb);
 
 #endif /* GR_H */
