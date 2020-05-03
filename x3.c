@@ -329,7 +329,7 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 
 size_t make_context2(char *p)
 {
-	return (unsigned char)p[-1] | (((unsigned char)p[-2]) << 8);
+	return (unsigned char)p[1] | (((unsigned char)p[0]) << 8);
 }
 
 void create()
@@ -383,7 +383,7 @@ void compress(char *ptr, size_t size)
 			p += len;
 
 			if (p >= ptr + 2) {
-				context2 = make_context2(p);
+				context2 = make_context2(p - 2);
 			}
 
 			/* recalc all costs, sort */
@@ -421,7 +421,7 @@ void compress(char *ptr, size_t size)
 			context1 = 0;
 
 			if (p >= ptr + 2) {
-				context2 = make_context2(p);
+				context2 = make_context2(p - 2);
 			}
 
 			dict_update_costs(p);
