@@ -191,7 +191,7 @@ size_t events[7];
 size_t sizes[7];
 
 /* encode dict[index].tag in context, rather than index */
-void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t index, size_t pindex)
+void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t context2, size_t index, size_t pindex)
 {
 	assert(ctx1 != NULL);
 
@@ -241,16 +241,30 @@ void encode_tag(size_t prev_context1, size_t context1, size_t context2, size_t i
 
 	switch (mode) {
 		case E_CTX0:
+			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX0 - 1);
+			/* TODO ctx_sizeof_tag(c0, tag) */
 			break;
 		case E_CTX1:
+			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX1 - 1);
+			/* TODO */
 			break;
 		case E_CTX2:
+			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX2 - 1);
+			/* TODO */
 			break;
 		case E_CTX3:
+			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX3 - 1);
+			/* TODO */
 			break;
 		case E_IDX1:
+			bio_write_gr(bio, 0, SIZEOF_BITCODE_IDX1 - 1);
+			assert(index <= UINT32_MAX);
+			bio_write_gr(bio, gr_idx1.opt_k, (uint32_t)index);
 			break;
 		case E_IDX2:
+			bio_write_gr(bio, 0, SIZEOF_BITCODE_IDX2 - 1);
+			assert(index - pindex <= UINT32_MAX);
+			bio_write_gr(bio, gr_idx2.opt_k, (uint32_t)(index - pindex));
 			break;
 	}
 
@@ -387,7 +401,7 @@ void compress(char *ptr, size_t size, struct bio *bio)
 			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
 #endif
 
-			encode_tag(prev_context1, context1, context2, index, pindex);
+			encode_tag(bio, prev_context1, context1, context2, index, pindex);
 
 			prev_context1 = context1;
 			context1 = dict_get_tag_by_index(index);
