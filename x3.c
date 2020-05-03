@@ -445,20 +445,21 @@ void destroy()
 	for (size_t e = 0; e < dict_get_elems(); ++e) {
 		free(ctx1[e].arr);
 	}
+	free(ctx1);
+	dict_destroy();
+
 	for (size_t e = 0; e < 65536; ++e) {
 		free(ctx2[e].arr);
 	}
+
 	for (size_t e = 0; e < 256; ++e) {
 		free(ctx3[e].arr);
 	}
-	free(ctx1);
-	dict_destroy();
 
 	for (size_t e = 0; e < tag_pair_get_elems(); ++e) {
 		free(ctx0[e].arr);
 	}
 	free(ctx0);
-
 	tag_pair_destroy();
 }
 
