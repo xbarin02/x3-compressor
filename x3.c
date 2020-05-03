@@ -614,10 +614,10 @@ char *decompress(char *ptr, struct bio *bio)
 
 			dict_set_last_pos(index, p);
 
-			/* FIXME: put uncompressed fragment */
-			extern struct elem *dict;
+			/* put uncompressed fragment */
+			const char *s = dict_get_str_by_index(index);
 			for (size_t c = 0; c < len; ++c) {
-				p[c] = dict[index].s[c];
+				p[c] = s[c];
 			}
 
 			p += len;

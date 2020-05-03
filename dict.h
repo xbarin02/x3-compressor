@@ -34,6 +34,8 @@ int dict_query_elem(struct elem *e);
 
 size_t dict_get_len_by_index(size_t index);
 
+const char *dict_get_str_by_index(size_t index);
+
 size_t dict_get_tag_by_index(size_t index);
 
 size_t dict_get_index_by_tag(size_t tag);

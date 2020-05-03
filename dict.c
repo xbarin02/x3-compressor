@@ -166,6 +166,11 @@ size_t dict_get_tag_by_index(size_t index)
 	return dict[index].tag;
 }
 
+const char *dict_get_str_by_index(size_t index)
+{
+	return dict[index].s;
+}
+
 size_t dict_get_index_by_tag(size_t tag)
 {
 	for (size_t i = 0; i < dict_elems; ++i) {
