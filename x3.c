@@ -1,4 +1,3 @@
-#define _POSIX_C_SOURCE 199309L
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +11,7 @@
 #include "dict.h"
 #include "gr.h"
 #include "tag_pair.h"
+#include "utils.h"
 
 struct item {
 	size_t tag;
@@ -461,18 +461,6 @@ void destroy()
 	}
 	free(ctx0);
 	tag_pair_destroy();
-}
-
-long wall_clock()
-{
-	struct timespec t;
-
-	if (clock_gettime(CLOCK_REALTIME, &t) < 0) {
-		fprintf(stderr, "wall-clock error\n");
-		return 0;
-	}
-
-	return t.tv_sec * 1000000000L + t.tv_nsec;
 }
 
 int main(int argc, char *argv[])
