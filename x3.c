@@ -12,6 +12,7 @@
 #include "gr.h"
 #include "tag_pair.h"
 #include "utils.h"
+#include "bio.h"
 
 struct item {
 	size_t tag;
@@ -166,13 +167,13 @@ void ctx0_realloc()
 	memset(ctx0 + tag_pair_get_elems(), 0, (tag_pair_get_size() - tag_pair_get_elems()) * sizeof(struct ctx));
 }
 
-#define SIZEOF_BITCODE_CTX0 2
-#define SIZEOF_BITCODE_CTX1 1
-#define SIZEOF_BITCODE_CTX2 4
-#define SIZEOF_BITCODE_CTX3 6
-#define SIZEOF_BITCODE_IDX1 3
-#define SIZEOF_BITCODE_IDX2 5
-#define SIZEOF_BITCODE_NEW  6
+#define SIZEOF_BITCODE_CTX1 1 /* 1 */
+#define SIZEOF_BITCODE_CTX0 2 /* 01 */
+#define SIZEOF_BITCODE_IDX1 3 /* 001 */
+#define SIZEOF_BITCODE_CTX2 4 /* 0001 */
+#define SIZEOF_BITCODE_IDX2 5 /* 00001*/
+#define SIZEOF_BITCODE_CTX3 6 /* 000001 */
+#define SIZEOF_BITCODE_NEW  /*6*/7 /* 000000 */
 
 /* list of events */
 enum {
@@ -352,7 +353,20 @@ void create()
 	ctx0_realloc();
 }
 
-void compress(char *ptr, size_t size)
+void encode_match(struct bio *bio, char *p, size_t len)
+{
+	assert(bio_sizeof_gr(0, SIZEOF_BITCODE_NEW - 1) == SIZEOF_BITCODE_NEW);
+	bio_write_gr(bio, 0, SIZEOF_BITCODE_NEW - 1);
+
+	assert(len > 0 && len <= (1 << MATCH_LOGSIZE));
+	bio_write_bits(bio, (uint32_t)(len - 1), MATCH_LOGSIZE);
+
+	for (size_t c = 0; c < len; ++c) {
+		bio_write_bits(bio, (uint32_t)*(p + c), 8);
+	}
+}
+
+void compress(char *ptr, size_t size, struct bio *bio)
 {
 	char *end = ptr + size;
 
@@ -402,6 +416,8 @@ void compress(char *ptr, size_t size)
 				abort();
 			}
 #endif
+
+			encode_match(bio, p, len);
 
 			struct elem e;
 			elem_fill(&e, p, len);
@@ -526,11 +542,37 @@ int main(int argc, char *argv[])
 
 	create();
 
+	struct bio bio;
+
+	char *optr = malloc(size);
+
+	if (optr == NULL) {
+		abort();
+	}
+
+	bio_open(&bio, optr, optr + size, BIO_MODE_WRITE);
+
 	long start = wall_clock();
 
-	compress(ptr, size);
+	compress(ptr, size, &bio);
 
 	printf("elapsed time: %f\n", (wall_clock() - start) / (float)1000000000L);
+
+	bio_close(&bio, BIO_MODE_WRITE);
+
+	FILE *ostream = fopen("output.bit", "w");
+
+	if (NULL == ostream) {
+		abort();
+	}
+
+	char *end = (char *)bio.ptr;
+
+	fsave(optr, end - optr, ostream);
+
+	fclose(ostream);
+
+	free(optr);
 
 	destroy();
 
