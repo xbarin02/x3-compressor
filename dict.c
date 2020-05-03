@@ -166,6 +166,17 @@ size_t dict_get_tag_by_index(size_t index)
 	return dict[index].tag;
 }
 
+size_t dict_get_index_by_tag(size_t tag)
+{
+	for (size_t i = 0; i < dict_elems; ++i) {
+		if (dict[i].tag == tag) {
+			return i;
+		}
+	}
+
+	abort();
+}
+
 void dict_set_last_pos(size_t index, char *p)
 {
 	dict[index].last_pos = p;

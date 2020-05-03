@@ -36,6 +36,8 @@ size_t dict_get_len_by_index(size_t index);
 
 size_t dict_get_tag_by_index(size_t index);
 
+size_t dict_get_index_by_tag(size_t tag);
+
 void dict_set_last_pos(size_t index, char *p);
 
 void dict_dump();
