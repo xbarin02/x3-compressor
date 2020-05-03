@@ -9,6 +9,13 @@ void fload(void *ptr, size_t size, FILE *stream)
 	}
 }
 
+void fsave(void *ptr, size_t size, FILE *stream)
+{
+	if (fwrite(ptr, 1, size, stream) < size) {
+		abort();
+	}
+}
+
 size_t fsize(FILE *stream)
 {
 	long begin = ftell(stream);
