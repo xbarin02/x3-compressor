@@ -942,12 +942,48 @@ int main(int argc, char *argv[])
 
 		bio_close(&bio, BIO_MODE_READ);
 
-		fsave(optr, oend - optr, ostream);
+		size_t size = oend - optr;
+		fsave(optr, size, ostream);
 
 		fclose(ostream);
 
 		free(iptr);
 		free(optr);
+
+		size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_IDX1] + events[E_IDX2];
+
+		size_t stream_size_gr = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2];
+		size_t stream_size = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2] + sizes[E_NEW];
+
+		printf("input stream size: %zu\n", size);
+		printf("output stream size: %zu\n", (stream_size + 7) / 8);
+		printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, events[E_NEW]);
+
+		printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), new %zu / %f%% (of which text %zu / %f%%)\n",
+			(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
+			(sizes[E_NEW] + 7) / 8, 100.f * sizes[E_NEW] / stream_size,
+			(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
+		);
+
+#if 1
+		printf("\x1b[37;1mcompression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
+#else
+		printf("compression ratio: %f\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
+#endif
+
+		printf("number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
+			events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_IDX1], events[E_IDX2], events[E_NEW]);
+		printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
+			100.f * sizes[E_CTX0] / stream_size,
+			100.f * sizes[E_CTX1] / stream_size,
+			100.f * sizes[E_CTX2] / stream_size,
+			100.f * sizes[E_CTX3] / stream_size,
+			100.f * sizes[E_IDX1] / stream_size,
+			100.f * sizes[E_IDX2] / stream_size,
+			100.f * sizes[E_NEW] / stream_size
+		);
+
+		printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536, (size_t)256);
 	}
 
 	return 0;
