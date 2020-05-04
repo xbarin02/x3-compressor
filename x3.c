@@ -35,6 +35,7 @@ void enlarge_ctx0()
 	ctx0 = ctx_enlarge(ctx0, tag_pair_get_size(), tag_pair_get_elems());
 }
 
+/* unary codes for individual code-stream events */
 #define SIZEOF_BITCODE_CTX1 1
 #define SIZEOF_BITCODE_CTX0 2
 #define SIZEOF_BITCODE_IDX1 3
@@ -650,6 +651,8 @@ int main(int argc, char *argv[])
 		abort();
 	}
 
+	create();
+
 	/* uncompressed size */
 	size_t size;
 
@@ -658,35 +661,31 @@ int main(int argc, char *argv[])
 		printf("forward window: %zu\n", get_forward_window());
 		printf("threads: %i\n", get_num_threads());
 
-		size = fsize(istream);
+		size_t isize = fsize(istream);
 
-		char *iptr = malloc(size + get_forward_window());
+		char *iptr = malloc(isize + get_forward_window());
 
 		if (iptr == NULL) {
 			abort();
 		}
 
-		memset(iptr + size, 0, get_forward_window());
+		memset(iptr + isize, 0, get_forward_window());
 
-		fload(iptr, size, istream);
-
-		fclose(istream);
-
-		create();
+		fload(iptr, isize, istream);
 
 		struct bio bio;
 
-		char *optr = malloc(size);
+		char *optr = malloc(isize * 2); /* at most 1 : 2 ratio */
 
 		if (optr == NULL) {
 			abort();
 		}
 
-		bio_open(&bio, optr, optr + size, BIO_MODE_WRITE);
+		bio_open(&bio, optr, optr + isize * 2, BIO_MODE_WRITE);
 
 		long start = wall_clock();
 
-		compress(iptr, size, &bio);
+		compress(iptr, isize, &bio);
 
 		printf("elapsed time: %f\n", (wall_clock() - start) / (float)1000000000L);
 
@@ -696,13 +695,10 @@ int main(int argc, char *argv[])
 
 		fsave(optr, end - optr, ostream);
 
-		fclose(ostream);
-
+		free(iptr);
 		free(optr);
 
-		destroy();
-
-		free(iptr);
+		size = isize;
 	} else {
 		size_t isize = fsize(istream);
 		size_t osize = 64 * isize; /* at most 64 : 1 ratio */
@@ -720,10 +716,6 @@ int main(int argc, char *argv[])
 
 		fload(iptr, isize, istream);
 
-		fclose(istream);
-
-		create();
-
 		unsigned char *iend = (unsigned char *)iptr + isize;
 
 		struct bio bio;
@@ -737,11 +729,14 @@ int main(int argc, char *argv[])
 		size = oend - optr;
 		fsave(optr, size, ostream);
 
-		fclose(ostream);
-
 		free(iptr);
 		free(optr);
 	}
+
+	destroy();
+
+	fclose(istream);
+	fclose(ostream);
 
 	size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_IDX1] + events[E_IDX2];
 
