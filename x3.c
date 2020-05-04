@@ -745,7 +745,7 @@ int main(int argc, char *argv[])
 	printf("output stream size: %zu\n", (stream_size + 7) / 8);
 	printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, events[E_NEW]);
 
-	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), new %zu / %f%% (of which text %zu / %f%%)\n",
+	printf("codestream size: dictionary %zu / %f%%, new fragment %zu / %f%% (of which text %zu / %f%%)\n",
 		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
 		(sizes[E_NEW] + 7) / 8, 100.f * sizes[E_NEW] / stream_size,
 		(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
@@ -759,7 +759,7 @@ int main(int argc, char *argv[])
 
 	printf("number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
 		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_IDX1], events[E_IDX2], events[E_NEW]);
-	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
+	printf("contexts sizes: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
 		100.f * sizes[E_CTX0] / stream_size,
 		100.f * sizes[E_CTX1] / stream_size,
 		100.f * sizes[E_CTX2] / stream_size,
