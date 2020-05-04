@@ -10,4 +10,6 @@ void fsave(void *ptr, size_t size, FILE *stream);
 
 size_t fsize(FILE *stream);
 
+FILE *force_fopen(const char *pathname, const char *mode, int force);
+
 #endif /* FILE_H */

@@ -1,6 +1,8 @@
 #include "file.h"
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
 
 void fload(void *ptr, size_t size, FILE *stream)
 {
@@ -40,4 +42,14 @@ size_t fsize(FILE *stream)
 	}
 
 	return (size_t)end - (size_t)begin;
+}
+
+FILE *force_fopen(const char *pathname, const char *mode, int force)
+{
+	if (force == 0 && access(pathname, F_OK) != -1) {
+		fprintf(stderr, "File already exists\n");
+		abort();
+	}
+
+	return fopen(pathname, mode);
 }
