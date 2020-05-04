@@ -44,13 +44,22 @@ void enlarge_ctx1()
 		abort();
 	}
 
-	/* dict_get_elems has been already incremented */
-
 	memset(ctx1 + dict_get_elems(), 0, (dict_get_size() - dict_get_elems()) * sizeof(struct ctx));
 
 	for (size_t e = dict_get_elems(); e < dict_get_size(); ++e) {
 		gr_init(&ctx1[e].gr, 0);
 	}
+}
+
+void ctx0_realloc()
+{
+	ctx0 = realloc(ctx0, tag_pair_get_size() * sizeof(struct ctx));
+
+	if (ctx0 == NULL) {
+		abort();
+	}
+
+	memset(ctx0 + tag_pair_get_elems(), 0, (tag_pair_get_size() - tag_pair_get_elems()) * sizeof(struct ctx));
 }
 
 struct item *ctx_query_tag_item(struct ctx *c, size_t tag)
@@ -183,25 +192,14 @@ size_t ctx_decode_tag_without_update(struct bio *bio, struct ctx *ctx)
 	return ctx->arr[item_index].tag;
 }
 
-void ctx0_realloc()
-{
-	ctx0 = realloc(ctx0, tag_pair_get_size() * sizeof(struct ctx));
-
-	if (ctx0 == NULL) {
-		abort();
-	}
-
-	memset(ctx0 + tag_pair_get_elems(), 0, (tag_pair_get_size() - tag_pair_get_elems()) * sizeof(struct ctx));
-}
-
-#define SIZEOF_BITCODE_CTX1 1 /* 1 */
-#define SIZEOF_BITCODE_CTX0 2 /* 01 */
-#define SIZEOF_BITCODE_IDX1 3 /* 001 */
-#define SIZEOF_BITCODE_CTX2 4 /* 0001 */
-#define SIZEOF_BITCODE_IDX2 5 /* 00001*/
-#define SIZEOF_BITCODE_CTX3 6 /* 000001 */
-#define SIZEOF_BITCODE_NEW  7 /*6*/ /* 000000 */
-#define SIZEOF_BITCODE_EOF  8 /* end of input */
+#define SIZEOF_BITCODE_CTX1 1
+#define SIZEOF_BITCODE_CTX0 2
+#define SIZEOF_BITCODE_IDX1 3
+#define SIZEOF_BITCODE_CTX2 4
+#define SIZEOF_BITCODE_IDX2 5
+#define SIZEOF_BITCODE_CTX3 6
+#define SIZEOF_BITCODE_NEW  7
+#define SIZEOF_BITCODE_EOF  8
 
 /* list of events */
 enum {
@@ -211,7 +209,7 @@ enum {
 	E_CTX3 = 3, /* tag in ctx3 */
 	E_IDX1 = 4, /* index in miss1 */
 	E_IDX2 = 5, /* index miss2 */
-	E_NEW = 6   /* new index/tag (uncompressed) */
+	E_NEW  = 6  /* new index/tag (uncompressed) */
 };
 
 size_t events[7];
@@ -265,14 +263,12 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 			size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 			break;
 		case SIZEOF_BITCODE_IDX1:
-			// bio_write_gr(bio, gr_idx1.opt_k, (uint32_t)index);
 			index = (size_t)bio_read_gr(bio, gr_idx1.opt_k);
 			tag = dict_get_tag_by_index(index);
 			mode = E_IDX1;
 			size = SIZEOF_BITCODE_IDX1 + gr_sizeof_symb(&gr_idx1, index);
 			break;
 		case SIZEOF_BITCODE_IDX2:
-			// bio_write_gr(bio, gr_idx2.opt_k, (uint32_t)(index - pindex));
 			index = (size_t)bio_read_gr(bio, gr_idx2.opt_k) + pindex;
 			tag = dict_get_tag_by_index(index);
 			mode = E_IDX2;
@@ -537,10 +533,10 @@ void create()
 
 void encode_match(struct bio *bio, char *p, size_t len)
 {
-	assert(bio_sizeof_gr(0, SIZEOF_BITCODE_NEW - 1) == SIZEOF_BITCODE_NEW);
 	bio_write_gr(bio, 0, SIZEOF_BITCODE_NEW - 1);
 
 	assert(len > 0 && len <= (1 << MATCH_LOGSIZE));
+
 	bio_write_bits(bio, (uint32_t)(len - 1), MATCH_LOGSIZE);
 
 	for (size_t c = 0; c < len; ++c) {
@@ -550,8 +546,6 @@ void encode_match(struct bio *bio, char *p, size_t len)
 
 void decode_match(struct bio *bio, char *p, size_t *p_len)
 {
-	/* SIZEOF_BITCODE_NEW has been already read */
-
 	*p_len = (size_t)(bio_read_bits(bio, MATCH_LOGSIZE) + 1);
 
 	for (size_t c = 0; c < *p_len; ++c) {
@@ -688,12 +682,6 @@ void compress(char *ptr, size_t size, struct bio *bio)
 			printf("[DEBUG] new match len %zu\n", len);
 #endif
 
-#if 0
-			if (fwrite(p, len, 1, rawstream) < 1) {
-				abort();
-			}
-#endif
-
 			encode_match(bio, p, len);
 
 			struct elem e;
@@ -826,12 +814,15 @@ int main(int argc, char *argv[])
 		abort();
 	}
 
+	/* uncompressed size */
+	size_t size;
+
 	if (mode == COMPRESS) {
 		printf("max match count: %i\n", get_max_match_count());
 		printf("forward window: %zu\n", get_forward_window());
 		printf("threads: %i\n", get_num_threads());
 
-		size_t size = fsize(istream);
+		size = fsize(istream);
 
 		char *iptr = malloc(size + get_forward_window());
 
@@ -876,41 +867,6 @@ int main(int argc, char *argv[])
 		destroy();
 
 		free(iptr);
-
-		size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_IDX1] + events[E_IDX2];
-
-		size_t stream_size_gr = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2];
-		size_t stream_size = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2] + sizes[E_NEW];
-
-		printf("input stream size: %zu\n", size);
-		printf("output stream size: %zu\n", (stream_size + 7) / 8);
-		printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, events[E_NEW]);
-
-		printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), new %zu / %f%% (of which text %zu / %f%%)\n",
-			(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
-			(sizes[E_NEW] + 7) / 8, 100.f * sizes[E_NEW] / stream_size,
-			(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
-		);
-
-#if 1
-		printf("\x1b[37;1mcompression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
-#else
-		printf("compression ratio: %f\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
-#endif
-
-		printf("number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
-			events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_IDX1], events[E_IDX2], events[E_NEW]);
-		printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
-			100.f * sizes[E_CTX0] / stream_size,
-			100.f * sizes[E_CTX1] / stream_size,
-			100.f * sizes[E_CTX2] / stream_size,
-			100.f * sizes[E_CTX3] / stream_size,
-			100.f * sizes[E_IDX1] / stream_size,
-			100.f * sizes[E_IDX2] / stream_size,
-			100.f * sizes[E_NEW] / stream_size
-		);
-
-		printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536, (size_t)256);
 	} else {
 		size_t isize = fsize(istream);
 		size_t osize = 64 * isize; /* at most 64 : 1 ratio */
@@ -942,49 +898,49 @@ int main(int argc, char *argv[])
 
 		bio_close(&bio, BIO_MODE_READ);
 
-		size_t size = oend - optr;
+		size = oend - optr;
 		fsave(optr, size, ostream);
 
 		fclose(ostream);
 
 		free(iptr);
 		free(optr);
+	}
 
-		size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_IDX1] + events[E_IDX2];
+	size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_IDX1] + events[E_IDX2];
 
-		size_t stream_size_gr = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2];
-		size_t stream_size = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2] + sizes[E_NEW];
+	size_t stream_size_gr = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2];
+	size_t stream_size = sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2] + sizes[E_NEW];
 
-		printf("input stream size: %zu\n", size);
-		printf("output stream size: %zu\n", (stream_size + 7) / 8);
-		printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, events[E_NEW]);
+	printf("input stream size: %zu\n", size);
+	printf("output stream size: %zu\n", (stream_size + 7) / 8);
+	printf("dictionary: hit %zu, miss %zu\n", dict_hit_count, events[E_NEW]);
 
-		printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), new %zu / %f%% (of which text %zu / %f%%)\n",
-			(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
-			(sizes[E_NEW] + 7) / 8, 100.f * sizes[E_NEW] / stream_size,
-			(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
-		);
+	printf("codestream size: dictionary %zu / %f%% (Golomb-Rice), new %zu / %f%% (of which text %zu / %f%%)\n",
+		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
+		(sizes[E_NEW] + 7) / 8, 100.f * sizes[E_NEW] / stream_size,
+		(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
+	);
 
 #if 1
-		printf("\x1b[37;1mcompression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
+	printf("\x1b[37;1mcompression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
 #else
-		printf("compression ratio: %f\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
+	printf("compression ratio: %f\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
 #endif
 
-		printf("number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
-			events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_IDX1], events[E_IDX2], events[E_NEW]);
-		printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
-			100.f * sizes[E_CTX0] / stream_size,
-			100.f * sizes[E_CTX1] / stream_size,
-			100.f * sizes[E_CTX2] / stream_size,
-			100.f * sizes[E_CTX3] / stream_size,
-			100.f * sizes[E_IDX1] / stream_size,
-			100.f * sizes[E_IDX2] / stream_size,
-			100.f * sizes[E_NEW] / stream_size
-		);
+	printf("number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
+		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_IDX1], events[E_IDX2], events[E_NEW]);
+	printf("contexts size: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
+		100.f * sizes[E_CTX0] / stream_size,
+		100.f * sizes[E_CTX1] / stream_size,
+		100.f * sizes[E_CTX2] / stream_size,
+		100.f * sizes[E_CTX3] / stream_size,
+		100.f * sizes[E_IDX1] / stream_size,
+		100.f * sizes[E_IDX2] / stream_size,
+		100.f * sizes[E_NEW] / stream_size
+	);
 
-		printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536, (size_t)256);
-	}
+	printf("context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536, (size_t)256);
 
 	return 0;
 }
