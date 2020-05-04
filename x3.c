@@ -30,7 +30,7 @@ void enlarge_ctx1()
 	ctx1 = ctx_enlarge(ctx1, dict_get_size(), dict_get_elems());
 }
 
-void ctx0_realloc()
+void enlarge_ctx0()
 {
 	ctx0 = ctx_enlarge(ctx0, tag_pair_get_size(), tag_pair_get_elems());
 }
@@ -189,7 +189,7 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 		// add new context
 		if (!tag_pair_can_add()) {
 			tag_pair_enlarge();
-			ctx0_realloc();
+			enlarge_ctx0();
 		}
 		tag_pair_add(&pair);
 	}
@@ -343,7 +343,7 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 		// add new context
 		if (!tag_pair_can_add()) {
 			tag_pair_enlarge();
-			ctx0_realloc();
+			enlarge_ctx0();
 		}
 		tag_pair_add(&pair);
 	}
@@ -371,7 +371,7 @@ void create()
 	}
 
 	tag_pair_enlarge();
-	ctx0_realloc();
+	enlarge_ctx0();
 }
 
 void encode_match(struct bio *bio, char *p, size_t len)
@@ -497,10 +497,6 @@ void compress(char *ptr, size_t size, struct bio *bio)
 			/* found in dictionary */
 			size_t len = dict_get_len_by_index(index);
 
-#if 0
-			printf("[DEBUG] (match size %zu) incrementing [%zu] freq %zu\n", len, index, dict[index].freq);
-#endif
-
 			encode_tag(bio, prev_context1, context1, context2, index, pindex);
 
 			prev_context1 = context1;
@@ -521,9 +517,6 @@ void compress(char *ptr, size_t size, struct bio *bio)
 		} else {
 			/* (2) else find best match and insert it into dictionary */
 			size_t len = find_best_match(p);
-#if 0
-			printf("[DEBUG] new match len %zu\n", len);
-#endif
 
 			encode_match(bio, p, len);
 
