@@ -640,12 +640,12 @@ int main(int argc, char *argv[])
 
 	switch (argc - optind) {
 		case 0:
-			istream = fopen("enwik8", "r");
-			ostream = force_fopen("output.bit", "w", force);
+			istream = stdin;
+			ostream = stdout;
 			break;
 		case 1:
 			istream = fopen(argv[optind], "r");
-			ostream = force_fopen("output.bit", "w", force);
+			ostream = stdout;
 			break;
 		case 2:
 			istream = fopen(argv[optind + 0], "r");
