@@ -36,30 +36,31 @@ struct gr gr_idx2; /* for E_IDX2 */
 
 size_t stream_size_raw_str = 0;
 
-void enlarge_ctx1()
+struct ctx *ctx_enlarge(struct ctx *c, size_t size, size_t elems)
 {
-	ctx1 = realloc(ctx1, dict_get_size() * sizeof(struct ctx));
+	c = realloc(c, size * sizeof(struct ctx));
 
-	if (ctx1 == NULL) {
+	if (c == NULL) {
 		abort();
 	}
 
-	memset(ctx1 + dict_get_elems(), 0, (dict_get_size() - dict_get_elems()) * sizeof(struct ctx));
+	memset(c + elems, 0, (size - elems) * sizeof(struct ctx));
 
-	for (size_t e = dict_get_elems(); e < dict_get_size(); ++e) {
-		gr_init(&ctx1[e].gr, 0);
+	for (size_t e = elems; e < size; ++e) {
+		gr_init(&c[e].gr, 0);
 	}
+
+	return c;
+}
+
+void enlarge_ctx1()
+{
+	ctx1 = ctx_enlarge(ctx1, dict_get_size(), dict_get_elems());
 }
 
 void ctx0_realloc()
 {
-	ctx0 = realloc(ctx0, tag_pair_get_size() * sizeof(struct ctx));
-
-	if (ctx0 == NULL) {
-		abort();
-	}
-
-	memset(ctx0 + tag_pair_get_elems(), 0, (tag_pair_get_size() - tag_pair_get_elems()) * sizeof(struct ctx));
+	ctx0 = ctx_enlarge(ctx0, tag_pair_get_size(), tag_pair_get_elems());
 }
 
 struct item *ctx_query_tag_item(struct ctx *c, size_t tag)
