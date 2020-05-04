@@ -589,20 +589,37 @@ enum {
 	DECOMPRESS
 };
 
+void print_help(char *path)
+{
+	fprintf(stderr, "Usage :\n\t%s [arguments] [input-file] [output-file]\n\n", path);
+	fprintf(stderr, "Arguments :\n");
+	fprintf(stderr, " -d     : force decompression\n");
+	fprintf(stderr, " -z     : force compression\n");
+	fprintf(stderr, " -f     : overwrite existing output file\n");
+	fprintf(stderr, " -k     : keep (don't delete) input file (default)\n");
+	fprintf(stderr, " -h     : print this message\n");
+	fprintf(stderr, " -t NUM : maximum number of matches (affects compression ratio and speed)\n");
+	fprintf(stderr, " -w NUM : window size (in kilobytes, affects compression ratio and speed)\n");
+	fprintf(stderr, " -T NUM : spawns NUM compression threads\n");
+}
 
 int main(int argc, char *argv[])
 {
 	int mode = COMPRESS;
+	int force = 0;
 
-	parse: switch (getopt(argc, argv, "zdht:w:T:")) {
+	parse: switch (getopt(argc, argv, "zdfht:w:T:")) {
 		case 'z':
 			mode = COMPRESS;
 			goto parse;
 		case 'd':
 			mode = DECOMPRESS;
 			goto parse;
+		case 'f':
+			force = 1;
+			goto parse;
 		case 'h':
-			// print_help(argv[0]);
+			print_help(argv[0]);
 			return 0;
 		case 't':
 			set_max_match_count(atoi(optarg));
@@ -616,7 +633,7 @@ int main(int argc, char *argv[])
 		default:
 			abort();
 		case -1:
-		;
+			;
 	}
 
 	FILE *istream = NULL, *ostream = NULL;
@@ -624,15 +641,15 @@ int main(int argc, char *argv[])
 	switch (argc - optind) {
 		case 0:
 			istream = fopen("enwik8", "r");
-			ostream = fopen("output.bit", "w");
+			ostream = force_fopen("output.bit", "w", force);
 			break;
 		case 1:
 			istream = fopen(argv[optind], "r");
-			ostream = fopen("output.bit", "w");
+			ostream = force_fopen("output.bit", "w", force);
 			break;
 		case 2:
 			istream = fopen(argv[optind + 0], "r");
-			ostream = fopen(argv[optind + 1], "w");
+			ostream = force_fopen(argv[optind + 1], "w", force);
 			break;
 		default:
 			fprintf(stderr, "Unexpected argument\n");
