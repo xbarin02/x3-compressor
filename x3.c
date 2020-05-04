@@ -653,6 +653,8 @@ int main(int argc, char *argv[])
 
 	create();
 
+	struct bio bio;
+
 	/* uncompressed size */
 	size_t size;
 
@@ -664,22 +666,18 @@ int main(int argc, char *argv[])
 		size_t isize = fsize(istream);
 
 		char *iptr = malloc(isize + get_forward_window());
+		char *optr = malloc(isize * 2); /* at most 1 : 2 ratio */
 
 		if (iptr == NULL) {
 			abort();
 		}
 
-		memset(iptr + isize, 0, get_forward_window());
-
-		fload(iptr, isize, istream);
-
-		struct bio bio;
-
-		char *optr = malloc(isize * 2); /* at most 1 : 2 ratio */
-
 		if (optr == NULL) {
 			abort();
 		}
+
+		memset(iptr + isize, 0, get_forward_window());
+		fload(iptr, isize, istream);
 
 		bio_open(&bio, optr, optr + isize * 2, BIO_MODE_WRITE);
 
@@ -693,18 +691,16 @@ int main(int argc, char *argv[])
 
 		char *end = (char *)bio.ptr;
 
+		size = isize;
 		fsave(optr, end - optr, ostream);
 
 		free(iptr);
 		free(optr);
-
-		size = isize;
 	} else {
 		size_t isize = fsize(istream);
-		size_t osize = 64 * isize; /* at most 64 : 1 ratio */
 
 		char *iptr = malloc(isize);
-		char *optr = malloc(osize);
+		char *optr = malloc(64 * isize); /* at most 64 : 1 ratio */
 
 		if (iptr == NULL) {
 			abort();
@@ -718,11 +714,13 @@ int main(int argc, char *argv[])
 
 		unsigned char *iend = (unsigned char *)iptr + isize;
 
-		struct bio bio;
-
 		bio_open(&bio, iptr, iend, BIO_MODE_READ);
 
+		long start = wall_clock();
+
 		char *oend = decompress((char *)optr, &bio);
+
+		printf("elapsed time: %f\n", (wall_clock() - start) / (float)1000000000L);
 
 		bio_close(&bio, BIO_MODE_READ);
 
