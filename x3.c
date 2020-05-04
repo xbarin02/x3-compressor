@@ -648,7 +648,17 @@ int main(int argc, char *argv[])
 			break;
 		case 1:
 			istream = fopen(argv[optind], "r");
-			ostream = stdout;
+			/* guess output file name */
+			if (mode == COMPRESS) {
+				char path[4096];
+				sprintf(path, "%s.x3", argv[optind]); /* add .x suffix */
+				ostream = force_fopen(path, "w", force);
+			} else {
+				if (strrchr(argv[optind], '.') != NULL) {
+					*strrchr(argv[optind], '.') = 0; /* remove suffix */
+				}
+				ostream = force_fopen(argv[optind], "w", force);
+			}
 			break;
 		case 2:
 			istream = fopen(argv[optind + 0], "r");
