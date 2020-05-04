@@ -609,7 +609,7 @@ int main(int argc, char *argv[])
 	int mode = COMPRESS;
 	int force = 0;
 
-	parse: switch (getopt(argc, argv, "zdfht:w:T:")) {
+	parse: switch (getopt(argc, argv, "zdfkht:w:T:")) {
 		case 'z':
 			mode = COMPRESS;
 			goto parse;
@@ -618,6 +618,8 @@ int main(int argc, char *argv[])
 			goto parse;
 		case 'f':
 			force = 1;
+			goto parse;
+		case 'k':
 			goto parse;
 		case 'h':
 			print_help(argv[0]);
