@@ -1,3 +1,6 @@
+/*
+ * Selects the optimum parameter for Golomb-Rice coding
+ */
 #ifndef GR_H
 #define GR_H
 

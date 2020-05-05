@@ -1,3 +1,6 @@
+/*
+ * Implements mapping (tag, tag) -> index
+ */
 #ifndef TAG_PAIR
 #define TAG_PAIR
 
