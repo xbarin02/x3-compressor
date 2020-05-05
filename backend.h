@@ -9,6 +9,14 @@
 /* match size */
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
 
+/*
+ * Search the segment p to p + get_forward_window(), and find the best match.
+ * The algorithm only considers the matches at most MAX_MATCH_LEN characters long.
+ * At most get_max_match_count() matches are considered.
+ * The get_forward_window() and get_max_match_count() substantially affect the compression ratio and speed.
+ *
+ * Returns the length of the best match.
+ */
 size_t find_best_match(char *p);
 
 void set_forward_window(size_t n);
