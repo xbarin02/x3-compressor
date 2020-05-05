@@ -26,6 +26,12 @@ int dict_can_insert_elem();
 
 void dict_insert_elem(const struct elem *e);
 
+/*
+ * Searches the dictionary and returns the best match.
+ *
+ * Returns the length of the best match.
+ * If no match is found, the function returns (size_t)-1.
+ */
 size_t dict_find_match(const char *p);
 
 void dict_update_costs(char *p);
