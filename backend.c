@@ -47,19 +47,14 @@ int get_max_match_count()
 	return g_max_match_count;
 }
 
-int pow2_p(size_t n)
-{
-	return (n & (n - 1)) == 0;
-}
-
 #ifdef _OPENMP
 size_t find_best_match(char *p)
 {
-	assert(pow2_p(g_forward_window));
-	assert(pow2_p(g_num_threads));
 	assert(g_forward_window > (size_t)g_num_threads);
 
 	size_t segment_size = g_forward_window / g_num_threads;
+
+	assert(g_forward_window % g_num_threads == 0);
 
 	assert(segment_size > MAX_MATCH_LEN);
 
