@@ -4,9 +4,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <limits.h>
+#include <stdint.h>
 #include <unistd.h>
-#include <time.h>
 #include "backend.h"
 #include "file.h"
 #include "dict.h"
