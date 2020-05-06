@@ -38,6 +38,8 @@ The following options were used:
 - `zstd --ultra -22`
 - `brotli -q 11`
 
+Most files come from the [Silesia](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia) compression corpus. The enwik8 comes from the [Hutter Prize](http://prize.hutter1.net/) page.
+
 Authors
 -------
 
