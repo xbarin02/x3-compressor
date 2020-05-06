@@ -53,7 +53,6 @@ Arguments :
 - `-z`     : force compression
 - `-f`     : overwrite existing output file
 - `-k`     : keep (don't delete) input file (default)
-- `-h`     : print this message
 - `-t NUM` : maximum number of matches (affects compression ratio and speed)
 - `-w NUM` : window size (in kilobytes, affects compression ratio and speed)
 - `-T NUM` : spawns NUM compression threads
