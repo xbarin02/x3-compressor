@@ -40,6 +40,24 @@ The following options were used:
 
 Most files come from the [Silesia](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia) compression corpus. The enwik8 comes from the [Hutter Prize](http://prize.hutter1.net/) page.
 
+Usage
+-----
+
+```
+./x3 [arguments] [input-file] [output-file]
+```
+
+Arguments :
+
+- `-d`     : force decompression
+- `-z`     : force compression
+- `-f`     : overwrite existing output file
+- `-k`     : keep (don't delete) input file (default)
+- `-h`     : print this message
+- `-t NUM` : maximum number of matches (affects compression ratio and speed)
+- `-w NUM` : window size (in kilobytes, affects compression ratio and speed)
+- `-T NUM` : spawns NUM compression threads
+
 Authors
 -------
 
