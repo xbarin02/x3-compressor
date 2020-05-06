@@ -31,12 +31,12 @@ Benchmarks
 
 The following options were used:
 
-- lz4 -9
-- gzip --best
-- bzip2 -9
-- xz -9 -e
-- zstd --ultra -22
-- brotli -q 11
+- `lz4 -9`
+- `gzip --best`
+- `bzip2 -9`
+- `xz -9 -e`
+- `zstd --ultra -22`
+- `brotli -q 11`
 
 Authors
 -------
