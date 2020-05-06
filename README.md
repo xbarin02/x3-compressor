@@ -11,12 +11,12 @@ Experimental data compressor based on unary and Golomb-Rice coding.
 The algorithm
 -------------
 
-The x3-compressor uses a dictionary and encodes various code-stream events using a unary and adaptive Golomb-Rice coding.
+The **x3** uses a dictionary and encodes various code-stream events using a unary and adaptive Golomb-Rice coding.
 
 Benchmarks
 ----------
 
-| Compressor |       lz4  |      gzip  |     bzip2  |        xz  |      zstd  |    brotli  | x3-compressor |
+| Compressor |       lz4  |      gzip  |     bzip2  |        xz  |      zstd  |    brotli  |            x3 |
 | ---------- | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: | ------------: |
 |    dickens |   2.2948   |   2.6461   | **3.6407** |   3.6000   |   3.5765   |   3.6044   |      3.3513   |
 |     enwik6 |   2.4393   |   2.8140   |   3.5546   |   3.4395   |   3.3313   | **3.5585** |      2.8251   |
