@@ -39,3 +39,7 @@ clean:
 .PHONY: distclean
 distclean: clean
 	-$(RM) -- *.gcda gmon.out cachegrind.out.* callgrind.out.*
+
+.PHONY: check
+check: all
+	for f in $(wildcard data/*); do ./x3 -zf $$f $$f.x3; ./x3 -df $$f.x3 $$f.x3.out; diff $$f $$f.x3.out; rm $$f.x3 $$f.x3.out; done
