@@ -24,6 +24,7 @@ struct ac {
 };
 
 void ac_init(struct ac *ac);
+
 void ac_encode_symbol(struct ac *ac, struct bio *bio, size_t symb, struct symbol *model, size_t symbols, size_t total_count);
 void ac_encode_flush(struct ac *ac, struct bio *bio);
 

@@ -116,7 +116,7 @@ void ac_encode_flush(struct ac *ac, struct bio *bio)
 		put_bit(bio, 1); // bw_put(ac->bw, 1);
 	}
 
-	bio_close(bio, BIO_MODE_WRITE); // bw_flush(ac->bw);
+	// bio_close(bio, BIO_MODE_WRITE); // bw_flush(ac->bw);
 }
 
 size_t ac_decode_target(struct ac *ac, size_t mStep)
