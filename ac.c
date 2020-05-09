@@ -190,3 +190,24 @@ size_t ac_decode_symbol(struct ac *ac, struct bio *bio, struct symbol *model, si
 
 	return model[index].symb;
 }
+
+void ac_encode_symbol_model(struct ac *ac, struct bio *bio, size_t symb, struct model *model)
+{
+	ac_encode_symbol(ac, bio, symb, model->table, model->count, model->total);
+}
+
+size_t ac_decode_symbol_model(struct ac *ac, struct bio *bio, struct model *model)
+{
+	return ac_decode_symbol(ac, bio, model->table, model->count, model->total);
+}
+
+void inc_model(struct model *model, size_t symbol)
+{
+	const size_t index = symbol;
+
+	const size_t increment = 1;
+
+	model->table[index].freq += increment;
+	count_cum_freqs(model->table, model->count);
+	model->total += increment;
+}

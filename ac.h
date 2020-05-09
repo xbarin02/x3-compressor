@@ -31,4 +31,14 @@ void ac_encode_flush(struct ac *ac, struct bio *bio);
 void ac_decode_init(struct ac *ac, struct bio *bio);
 size_t ac_decode_symbol(struct ac *ac, struct bio *bio, struct symbol *model, size_t symbols, size_t total);
 
+struct model {
+	size_t count;
+	size_t total;
+	struct symbol *table; /* count entries */
+};
+
+void ac_encode_symbol_model(struct ac *ac, struct bio *bio, size_t symb, struct model *model);
+size_t ac_decode_symbol_model(struct ac *ac, struct bio *bio, struct model *model);
+void inc_model(struct model *model, size_t symbol);
+
 #endif /* AC_H */
