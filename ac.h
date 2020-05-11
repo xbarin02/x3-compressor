@@ -42,5 +42,6 @@ size_t ac_decode_symbol_model(struct ac *ac, struct bio *bio, struct model *mode
 void inc_model(struct model *model, size_t symbol);
 
 void model_create(struct model *model, size_t size);
+void model_enlarge(struct model *model);
 
 #endif /* AC_H */

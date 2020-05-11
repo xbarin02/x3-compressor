@@ -5,14 +5,17 @@
 
 void count_cum_freqs(struct symbol *table, size_t symbols)
 {
-	assert(symbols > 0);
+// 	assert(symbols > 0);
 
-	table[0].cum_freq = 0;
+	if (symbols > 0) {
+		table[0].cum_freq = 0;
 
-	for (size_t i = 1; i < symbols; i++) {
-		table[i].cum_freq =
-			table[i-1].cum_freq +
-			table[i-1].freq;
+		for (size_t i = 1; i < symbols; i++) {
+			table[i].cum_freq =
+				table[i-1].cum_freq +
+				table[i-1].freq;
+		}
+
 	}
 }
 
@@ -227,6 +230,24 @@ void model_create(struct model *model, size_t size)
 		model->table[i].symb = i;
 		model->table[i].freq = 1;
 	}
+
+	count_cum_freqs(model->table, model->count);
+	model->total = calc_total_freq(model->table, model->count);
+}
+
+void model_enlarge(struct model *model)
+{
+	assert(model != NULL);
+
+	model->count++;
+	model->table = realloc(model->table, model->count * sizeof(struct symbol));
+
+	if (model->table == NULL) {
+		abort();
+	}
+
+	model->table[model->count - 1].symb = model->count - 1;
+	model->table[model->count - 1].freq = 1;
 
 	count_cum_freqs(model->table, model->count);
 	model->total = calc_total_freq(model->table, model->count);
