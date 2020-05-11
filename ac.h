@@ -41,4 +41,6 @@ void ac_encode_symbol_model(struct ac *ac, struct bio *bio, size_t symb, struct 
 size_t ac_decode_symbol_model(struct ac *ac, struct bio *bio, struct model *model);
 void inc_model(struct model *model, size_t symbol);
 
+void model_create(struct model *model, size_t size);
+
 #endif /* AC_H */

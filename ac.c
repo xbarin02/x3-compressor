@@ -211,3 +211,23 @@ void inc_model(struct model *model, size_t symbol)
 	count_cum_freqs(model->table, model->count);
 	model->total += increment;
 }
+
+void model_create(struct model *model, size_t size)
+{
+	assert(model != NULL);
+
+	model->count = size;
+	model->table = malloc(model->count * sizeof(struct symbol));
+
+	if (model->table == NULL) {
+		abort();
+	}
+
+	for (size_t i = 0; i < model->count; ++i) {
+		model->table[i].symb = i;
+		model->table[i].freq = 1;
+	}
+
+	count_cum_freqs(model->table, model->count);
+	model->total = calc_total_freq(model->table, model->count);
+}
