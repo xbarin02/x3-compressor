@@ -43,5 +43,6 @@ void inc_model(struct model *model, size_t symbol);
 
 void model_create(struct model *model, size_t size);
 void model_enlarge(struct model *model);
+void model_destroy(struct model *model);
 
 #endif /* AC_H */

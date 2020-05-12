@@ -5,8 +5,6 @@
 
 void count_cum_freqs(struct symbol *table, size_t symbols)
 {
-// 	assert(symbols > 0);
-
 	if (symbols > 0) {
 		table[0].cum_freq = 0;
 
@@ -251,4 +249,11 @@ void model_enlarge(struct model *model)
 
 	count_cum_freqs(model->table, model->count);
 	model->total = calc_total_freq(model->table, model->count);
+}
+
+void model_destroy(struct model *model)
+{
+	assert(model != NULL);
+
+	free(model->table);
 }
