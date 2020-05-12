@@ -15,3 +15,5 @@ One of the following contexts is used:
 - last two bytes
 - last byte
 - no context (encode directly the index into the dictionary)
+
+The decision on which context to use is based on an estimate of the compression using unary and Golom-Rice coding.
