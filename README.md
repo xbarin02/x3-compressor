@@ -11,7 +11,8 @@ Experimental data compressor based on unary and Golomb-Rice coding.
 The algorithm
 -------------
 
-The **x3** uses a dictionary and encodes various code-stream events using a unary and adaptive Golomb-Rice coding.
+The **x3** uses a dictionary and encodes various code-stream events using a unary, Golomb-Rice, and arithmetic coding.
+Details are given [here](ALGORITHM.md).
 
 Benchmarks
 ----------
