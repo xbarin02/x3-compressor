@@ -136,6 +136,25 @@ void ctx_encode_tag_without_update(struct bio *bio, struct ctx *ctx, size_t tag)
 	}
 }
 
+void ctx_encode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct ctx *ctx, size_t tag)
+{
+	struct model model;
+	model_create(&model, ctx->items);
+
+	for (size_t i = 0; i < ctx->items; ++i) {
+		model.table[i].freq = ctx->arr[i].freq;
+	}
+
+	count_cum_freqs(model.table, model.count);
+	model.total = calc_total_freq(model.table, model.count);
+
+	size_t item_index = ctx_query_tag_index(ctx, tag);
+
+	ac_encode_symbol_model(ac, bio_a, item_index, &model);
+
+	model_destroy(&model);
+}
+
 size_t ctx_decode_tag_without_update(struct bio *bio, struct ctx *ctx)
 {
 	size_t item_index = 0;
@@ -147,6 +166,25 @@ size_t ctx_decode_tag_without_update(struct bio *bio, struct ctx *ctx)
 	} else {
 		/* there is only one */
 	}
+
+	return ctx->arr[item_index].tag;
+}
+
+size_t ctx_decode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct ctx *ctx)
+{
+	struct model model;
+	model_create(&model, ctx->items);
+
+	for (size_t i = 0; i < ctx->items; ++i) {
+		model.table[i].freq = ctx->arr[i].freq;
+	}
+
+	count_cum_freqs(model.table, model.count);
+	model.total = calc_total_freq(model.table, model.count);
+
+	size_t item_index = ac_decode_symbol_model(ac, bio_a, &model);
+
+	model_destroy(&model);
 
 	return ctx->arr[item_index].tag;
 }
