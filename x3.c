@@ -14,6 +14,7 @@
 #include "utils.h"
 #include "bio.h"
 #include "context.h"
+#include "ac.h"
 
 struct ctx *ctx0 = NULL; /* previous two tags */
 struct ctx *ctx1 = NULL; /* previous tag */
@@ -45,6 +46,8 @@ void enlarge_ctx0()
 #define SIZEOF_BITCODE_NEW  7
 #define SIZEOF_BITCODE_EOF  8
 
+/* WARNING SIZEOF_BITCODE_* do not correspond to E_* + 1 */
+
 /* list of events */
 enum {
 	E_CTX0 = 0, /* tag in ctx0 */
@@ -53,12 +56,32 @@ enum {
 	E_CTX3 = 3, /* tag in ctx3 */
 	E_IDX1 = 4, /* index in miss1 */
 	E_IDX2 = 5, /* index miss2 */
-	E_NEW  = 6  /* new index/tag (uncompressed) */
+	E_NEW  = 6, /* new index/tag (uncompressed) */
+	E_EOF  = 7  /* end of stream */
+};
+
+size_t EVENT_TO_BITCODE[8] = {
+	SIZEOF_BITCODE_CTX0, /* E_CTX0 */
+	SIZEOF_BITCODE_CTX1, /* E_CTX1 */
+	SIZEOF_BITCODE_CTX2, /* E_CTX2 */
+	SIZEOF_BITCODE_CTX3, /* E_CTX3 */
+	SIZEOF_BITCODE_IDX1, /* E_IDX1 */
+	SIZEOF_BITCODE_IDX2, /* E_IDX2 */
+	SIZEOF_BITCODE_NEW,  /* E_NEW */
+	SIZEOF_BITCODE_EOF   /* E_EOF */
 };
 
 size_t events[7];
 
 size_t sizes[7];
+
+struct ac ac;
+
+struct model model_events;
+struct model model_match_size;
+struct model model_chars;
+struct model model_index1;
+struct model model_index2;
 
 /* return index */
 size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t context1, size_t context2, size_t pindex)
@@ -83,37 +106,39 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 	size_t size; /* for stats */
 	switch (decision) {
 		case SIZEOF_BITCODE_CTX0:
-			tag = ctx_decode_tag_without_update(bio, c0);
+			tag = ctx_decode_tag_without_update_ac(bio, &ac, c0);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX0;
 			size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
 			break;
 		case SIZEOF_BITCODE_CTX1:
-			tag = ctx_decode_tag_without_update(bio, c1);
+			tag = ctx_decode_tag_without_update_ac(bio, &ac, c1);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX1;
 			size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
 			break;
 		case SIZEOF_BITCODE_CTX2:
-			tag = ctx_decode_tag_without_update(bio, c2);
+			tag = ctx_decode_tag_without_update_ac(bio, &ac, c2);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX2;
 			size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 			break;
 		case SIZEOF_BITCODE_CTX3:
-			tag = ctx_decode_tag_without_update(bio, c3);
+			tag = ctx_decode_tag_without_update_ac(bio, &ac, c3);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX3;
 			size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 			break;
 		case SIZEOF_BITCODE_IDX1:
-			index = (size_t)bio_read_gr(bio, gr_idx1.opt_k);
+			index = ac_decode_symbol_model(&ac, bio, &model_index1);
+			inc_model(&model_index1, index);
 			tag = dict_get_tag_by_index(index);
 			mode = E_IDX1;
 			size = SIZEOF_BITCODE_IDX1 + gr_sizeof_symb(&gr_idx1, index);
 			break;
 		case SIZEOF_BITCODE_IDX2:
-			index = (size_t)bio_read_gr(bio, gr_idx2.opt_k) + pindex;
+			index = ac_decode_symbol_model(&ac, bio, &model_index2) + pindex;
+			inc_model(&model_index2, index - pindex);
 			tag = dict_get_tag_by_index(index);
 			mode = E_IDX2;
 			size = SIZEOF_BITCODE_IDX2 + gr_sizeof_symb(&gr_idx2, index - pindex);
@@ -247,32 +272,29 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 
 	// encode
 
+	ac_encode_symbol_model(&ac, bio, mode, &model_events);
+	inc_model(&model_events, mode);
+
 	switch (mode) {
 		case E_CTX0:
-			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX0 - 1);
-			ctx_encode_tag_without_update(bio, c0, tag);
+			ctx_encode_tag_without_update_ac(bio, &ac, c0, tag);
 			break;
 		case E_CTX1:
-			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX1 - 1);
-			ctx_encode_tag_without_update(bio, c1, tag);
+			ctx_encode_tag_without_update_ac(bio, &ac, c1, tag);
 			break;
 		case E_CTX2:
-			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX2 - 1);
-			ctx_encode_tag_without_update(bio, c2, tag);
+			ctx_encode_tag_without_update_ac(bio, &ac, c2, tag);
 			break;
 		case E_CTX3:
-			bio_write_gr(bio, 0, SIZEOF_BITCODE_CTX3 - 1);
-			ctx_encode_tag_without_update(bio, c3, tag);
+			ctx_encode_tag_without_update_ac(bio, &ac, c3, tag);
 			break;
 		case E_IDX1:
-			bio_write_gr(bio, 0, SIZEOF_BITCODE_IDX1 - 1);
-			assert(index <= UINT32_MAX);
-			bio_write_gr(bio, gr_idx1.opt_k, (uint32_t)index);
+			ac_encode_symbol_model(&ac, bio, index, &model_index1);
+			inc_model(&model_index1, index);
 			break;
 		case E_IDX2:
-			bio_write_gr(bio, 0, SIZEOF_BITCODE_IDX2 - 1);
-			assert(index - pindex <= UINT32_MAX);
-			bio_write_gr(bio, gr_idx2.opt_k, (uint32_t)(index - pindex));
+			ac_encode_symbol_model(&ac, bio, index - pindex, &model_index2);
+			inc_model(&model_index2, index - pindex);
 			break;
 	}
 
@@ -373,27 +395,39 @@ void create()
 
 	tag_pair_enlarge();
 	enlarge_ctx0();
+
+	/* initialize AC models */
+	model_create(&model_events, 8);
+	model_create(&model_match_size, 1 << MATCH_LOGSIZE);
+	model_create(&model_chars, 256);
+	model_create(&model_index1, 0);
+	model_create(&model_index2, 0);
 }
 
 void encode_match(struct bio *bio, char *p, size_t len)
 {
-	bio_write_gr(bio, 0, SIZEOF_BITCODE_NEW - 1);
+	ac_encode_symbol_model(&ac, bio, E_NEW, &model_events);
+	inc_model(&model_events, E_NEW);
 
 	assert(len > 0 && len <= (1 << MATCH_LOGSIZE));
 
-	bio_write_bits(bio, (uint32_t)(len - 1), MATCH_LOGSIZE);
+	ac_encode_symbol_model(&ac, bio, len - 1, &model_match_size);
+	inc_model(&model_match_size, len - 1);
 
 	for (size_t c = 0; c < len; ++c) {
-		bio_write_bits(bio, (uint32_t)*(p + c), 8);
+		ac_encode_symbol_model(&ac, bio, (unsigned char)p[c], &model_chars);
+		inc_model(&model_chars, (unsigned char)p[c]);
 	}
 }
 
 void decode_match(struct bio *bio, char *p, size_t *p_len)
 {
-	*p_len = (size_t)(bio_read_bits(bio, MATCH_LOGSIZE) + 1);
+	*p_len = ac_decode_symbol_model(&ac, bio, &model_match_size) + 1;
+	inc_model(&model_match_size, *p_len - 1);
 
 	for (size_t c = 0; c < *p_len; ++c) {
-		*(p + c) = (char)bio_read_bits(bio, 8);
+		p[c] = (char)ac_decode_symbol_model(&ac, bio, &model_chars);
+		inc_model(&model_chars, (unsigned char)p[c]);
 	}
 }
 
@@ -407,7 +441,9 @@ char *decompress(char *ptr, struct bio *bio)
 	char *p = ptr;
 
 	for (;;) {
-		size_t decision = (size_t)(bio_read_gr(bio, 0) + 1);
+		size_t ev = ac_decode_symbol_model(&ac, bio, &model_events);
+		size_t decision = EVENT_TO_BITCODE[ev];
+		inc_model(&model_events, ev);
 
 		if (decision == SIZEOF_BITCODE_EOF) {
 			break;
@@ -429,6 +465,8 @@ char *decompress(char *ptr, struct bio *bio)
 			}
 
 			dict_insert_elem(&e);
+			model_enlarge(&model_index1);
+			model_enlarge(&model_index2);
 
 			p += len;
 
@@ -532,6 +570,8 @@ void compress(char *ptr, size_t size, struct bio *bio)
 			}
 
 			dict_insert_elem(&e);
+			model_enlarge(&model_index1);
+			model_enlarge(&model_index2);
 
 			p += len;
 
@@ -554,7 +594,8 @@ void compress(char *ptr, size_t size, struct bio *bio)
 	}
 
 	/* signal end of input */
-	bio_write_gr(bio, 0, SIZEOF_BITCODE_EOF - 1);
+	ac_encode_symbol_model(&ac, bio, E_EOF, &model_events);
+	inc_model(&model_events, E_EOF);
 }
 
 void destroy()
@@ -582,6 +623,12 @@ void destroy()
 	}
 	free(ctx0);
 	tag_pair_destroy();
+
+	model_destroy(&model_events);
+	model_destroy(&model_match_size);
+	model_destroy(&model_chars);
+	model_destroy(&model_index1);
+	model_destroy(&model_index2);
 }
 
 enum {
@@ -686,6 +733,8 @@ int main(int argc, char *argv[])
 
 	/* uncompressed size */
 	size_t size;
+	/* compressed size */
+	size_t asize;
 
 	if (mode == COMPRESS) {
 		fprintf(stderr, "max match count: %i\n", get_max_match_count());
@@ -710,23 +759,30 @@ int main(int argc, char *argv[])
 
 		bio_open(&bio, optr, optr + isize * 2, BIO_MODE_WRITE);
 
+		ac_init(&ac);
+
 		long start = wall_clock();
 
 		compress(iptr, isize, &bio);
 
 		fprintf(stderr, "elapsed time: %f\n", (wall_clock() - start) / (float)1000000000L);
 
+		ac_encode_flush(&ac, &bio);
 		bio_close(&bio, BIO_MODE_WRITE);
 
 		char *end = (char *)bio.ptr;
 
 		size = isize;
-		fsave(optr, end - optr, ostream);
+		asize = end - optr;
+
+		fsave(optr, asize, ostream);
 
 		free(iptr);
 		free(optr);
 	} else {
 		size_t isize = fsize(istream);
+
+		asize = isize;
 
 		char *iptr = malloc(isize);
 		char *optr = malloc(64 * isize); /* at most 64 : 1 ratio */
@@ -745,6 +801,10 @@ int main(int argc, char *argv[])
 
 		bio_open(&bio, iptr, iend, BIO_MODE_READ);
 
+		ac_init(&ac);
+
+		ac_decode_init(&ac, &bio);
+
 		long start = wall_clock();
 
 		char *oend = decompress((char *)optr, &bio);
@@ -754,6 +814,7 @@ int main(int argc, char *argv[])
 		bio_close(&bio, BIO_MODE_READ);
 
 		size = oend - optr;
+
 		fsave(optr, size, ostream);
 
 		free(iptr);
@@ -781,9 +842,11 @@ int main(int argc, char *argv[])
 	);
 
 #if 1
-	fprintf(stderr, "\x1b[37;1mcompression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
+	fprintf(stderr, "\x1b[37;1mGR compression ratio: %f\x1b[0m\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
+	fprintf(stderr, "\x1b[37;1mAC compression ratio: %f\x1b[0m\n", size / (float)asize);
 #else
-	fprintf(stderr, "compression ratio: %f\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
+	fprintf(stderr, "GR compression ratio: %f\n", size / (float)((stream_size_gr + sizes[E_NEW] + 7) / 8));
+	fprintf(stderr, "AC compression ratio: %f\n", size / (float)asize);
 #endif
 
 	fprintf(stderr, "number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
