@@ -10,8 +10,8 @@ The compression algorithm performs the following loop until it hits the end of t
 All information is encoded using a context arithmetic encoder.
 One of the following contexts is used:
 
-- the last index into the dictionary
 - the last two indexes into the dictionary
+- the last index into the dictionary
 - last two bytes
 - last byte
 - no context (encode directly the index into the dictionary)
