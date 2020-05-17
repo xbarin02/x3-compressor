@@ -68,17 +68,6 @@ enum {
 	E_EOF  = 7  /* end of stream */
 };
 
-size_t EVENT_TO_BITCODE[8] = {
-	SIZEOF_BITCODE_CTX0, /* E_CTX0 */
-	SIZEOF_BITCODE_CTX1, /* E_CTX1 */
-	SIZEOF_BITCODE_CTX2, /* E_CTX2 */
-	SIZEOF_BITCODE_CTX3, /* E_CTX3 */
-	SIZEOF_BITCODE_IDX1, /* E_IDX1 */
-	SIZEOF_BITCODE_IDX2, /* E_IDX2 */
-	SIZEOF_BITCODE_NEW,  /* E_NEW */
-	SIZEOF_BITCODE_EOF   /* E_EOF */
-};
-
 size_t events[7];
 
 size_t sizes[7];
@@ -113,38 +102,38 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 	size_t index;
 	size_t size; /* for stats */
 	switch (decision) {
-		case SIZEOF_BITCODE_CTX0:
+		case E_CTX0:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c0);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX0;
 			size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
 			break;
-		case SIZEOF_BITCODE_CTX1:
+		case E_CTX1:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c1);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX1;
 			size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
 			break;
-		case SIZEOF_BITCODE_CTX2:
+		case E_CTX2:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c2);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX2;
 			size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 			break;
-		case SIZEOF_BITCODE_CTX3:
+		case E_CTX3:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c3);
 			index = dict_get_index_by_tag(tag);
 			mode = E_CTX3;
 			size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 			break;
-		case SIZEOF_BITCODE_IDX1:
+		case E_IDX1:
 			index = ac_decode_symbol_model(&ac, bio, &model_index1);
 			inc_model(&model_index1, index);
 			tag = dict_get_tag_by_index(index);
 			mode = E_IDX1;
 			size = SIZEOF_BITCODE_IDX1 + gr_sizeof_symb(&gr_idx1, index);
 			break;
-		case SIZEOF_BITCODE_IDX2:
+		case E_IDX2:
 			index = ac_decode_symbol_model(&ac, bio, &model_index2) + pindex;
 			inc_model(&model_index2, index - pindex);
 			tag = dict_get_tag_by_index(index);
@@ -473,13 +462,12 @@ char *decompress(char *ptr, struct bio *bio)
 	char *p = ptr;
 
 	for (;;) {
-		size_t ev = ac_decode_symbol_model(&ac, bio, &model_events);
-		size_t decision = EVENT_TO_BITCODE[ev];
-		inc_model(&model_events, ev);
+		size_t decision = ac_decode_symbol_model(&ac, bio, &model_events);
+		inc_model(&model_events, decision);
 
-		if (decision == SIZEOF_BITCODE_EOF) {
+		if (decision == E_EOF) {
 			break;
-		} else if (decision == SIZEOF_BITCODE_NEW) {
+		} else if (decision == E_NEW) {
 			/* new match */
 
 			size_t len;
