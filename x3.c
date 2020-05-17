@@ -489,16 +489,16 @@ char *decompress(char *ptr, struct bio *bio)
 			struct elem e;
 			elem_fill(&e, p, len);
 
-			assert(dict_query_elem(&e) == 0);
+			if (dict_query_elem(&e) == 0) {
+				if (!dict_can_insert_elem()) {
+					dict_enlarge();
+					enlarge_ctx1();
+				}
 
-			if (!dict_can_insert_elem()) {
-				dict_enlarge();
-				enlarge_ctx1();
+				dict_insert_elem(&e);
+				model_enlarge(&model_index1);
+				model_enlarge(&model_index2);
 			}
-
-			dict_insert_elem(&e);
-			model_enlarge(&model_index1);
-			model_enlarge(&model_index2);
 
 			p += len;
 
@@ -564,7 +564,7 @@ void compress(char *ptr, size_t size, struct bio *bio)
 		/* (1) look into dictionary */
 		size_t index = dict_find_match(p);
 
-		if (index != (size_t)-1 && dict_get_len_by_index(index) >= find_best_match(p)) {
+		if (index != (size_t)-1 && dict_get_len_by_index(index) >= find_best_match(p) && p + dict_get_len_by_index(index) <= end) {
 			/* found in dictionary */
 			size_t len = dict_get_len_by_index(index);
 
@@ -589,21 +589,26 @@ void compress(char *ptr, size_t size, struct bio *bio)
 			/* (2) else find best match and insert it into dictionary */
 			size_t len = find_best_match(p);
 
+			if (p + len > end) {
+				len = end - p;
+			}
+
 			encode_match(bio, p, len);
 
 			struct elem e;
 			elem_fill(&e, p, len);
 
-			assert(dict_query_elem(&e) == 0);
+			/* close to the 'end', the alg. tries to insert matches already stored in the dictionary */
+			if (dict_query_elem(&e) == 0) {
+				if (!dict_can_insert_elem()) {
+					dict_enlarge();
+					enlarge_ctx1();
+				}
 
-			if (!dict_can_insert_elem()) {
-				dict_enlarge();
-				enlarge_ctx1();
+				dict_insert_elem(&e);
+				model_enlarge(&model_index1);
+				model_enlarge(&model_index2);
 			}
-
-			dict_insert_elem(&e);
-			model_enlarge(&model_index1);
-			model_enlarge(&model_index2);
 
 			p += len;
 
