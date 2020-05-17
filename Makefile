@@ -41,5 +41,11 @@ distclean: clean
 	-$(RM) -- *.gcda gmon.out cachegrind.out.* callgrind.out.*
 
 .PHONY: check
-check: all
-	for f in $(wildcard data/*); do ./x3 -zf $$f $$f.x3; ./x3 -df $$f.x3 $$f.x3.out; diff $$f $$f.x3.out; rm $$f.x3 $$f.x3.out; done
+check: $(addsuffix .test,$(wildcard data/*))
+
+%.test: all
+	echo $$(dirname $@)/$$(basename -s .test $@):
+	./x3 -zf $$(dirname $@)/$$(basename -s .test $@) $$(dirname $@)/$$(basename -s .test $@).x3
+	./x3 -df $$(dirname $@)/$$(basename -s .test $@).x3 $$(dirname $@)/$$(basename -s .test $@).x3.out
+	diff $$(dirname $@)/$$(basename -s .test $@) $$(dirname $@)/$$(basename -s .test $@).x3.out
+	rm $$(dirname $@)/$$(basename -s .test $@).x3 $$(dirname $@)/$$(basename -s .test $@).x3.out
