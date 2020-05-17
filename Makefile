@@ -1,6 +1,6 @@
 CFLAGS+=-std=c99 -pedantic -Wall -Wextra -fopenmp
 LDFLAGS+=-fopenmp
-LDLIBS+=
+LDLIBS+=-lm
 
 BIN=x3
 

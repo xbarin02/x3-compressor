@@ -105,6 +105,16 @@ void ac_encode_symbol(struct ac *ac, struct bio *bio, size_t symb, struct symbol
 	ac_encode(ac, bio, low_freq, high_freq, total_count);
 }
 
+float ac_encode_symbol_query_prob(struct ac *ac, struct bio *bio, size_t symb, struct symbol *model, size_t symbols, size_t total_count)
+{
+	size_t index = index_of_symbol(symb, model, symbols);
+
+	(void)ac;
+	(void)bio;
+
+	return (float)model[index].freq / total_count;
+}
+
 void ac_encode_flush(struct ac *ac, struct bio *bio)
 {
 	if (ac->mLow < g_FirstQuarter) {
@@ -197,6 +207,11 @@ void ac_encode_symbol_model(struct ac *ac, struct bio *bio, size_t symb, struct 
 	ac_encode_symbol(ac, bio, symb, model->table, model->count, model->total);
 }
 
+float ac_encode_symbol_model_query_prob(struct ac *ac, struct bio *bio, size_t symb, struct model *model)
+{
+	return ac_encode_symbol_query_prob(ac, bio, symb, model->table, model->count, model->total);
+}
+
 size_t ac_decode_symbol_model(struct ac *ac, struct bio *bio, struct model *model)
 {
 	return ac_decode_symbol(ac, bio, model->table, model->count, model->total);
@@ -204,8 +219,12 @@ size_t ac_decode_symbol_model(struct ac *ac, struct bio *bio, struct model *mode
 
 void inc_model(struct model *model, size_t symbol)
 {
+#if 1
+	// FIXME BUG
 	const size_t index = symbol;
-
+#else
+	size_t index = index_of_symbol(symbol, model->table, model->count);
+#endif
 	const size_t increment = 1;
 
 	model->table[index].freq += increment;

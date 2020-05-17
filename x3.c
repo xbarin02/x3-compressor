@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <math.h>
 #include "backend.h"
 #include "file.h"
 #include "dict.h"
@@ -45,6 +46,13 @@ void enlarge_ctx0()
 #define SIZEOF_BITCODE_CTX3 6
 #define SIZEOF_BITCODE_NEW  7
 #define SIZEOF_BITCODE_EOF  8
+
+#define PROB_CTX0 0.50000
+#define PROB_CTX1 1.00000
+#define PROB_CTX2 0.12500
+#define PROB_CTX3 0.03125
+#define PROB_IDX1 0.25000
+#define PROB_IDX2 0.06250
 
 /* WARNING SIZEOF_BITCODE_* do not correspond to E_* + 1 */
 
@@ -246,29 +254,53 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 
 	// find the best option
 
-	int mode = E_IDX1;
-	size_t size = SIZEOF_BITCODE_IDX1 + gr_sizeof_symb(&gr_idx1, index);
+	float prob_ctx0 = 0;
+	if (ctx_query_tag_item(c0, tag) != NULL) {
+		prob_ctx0 = PROB_CTX0 * ctx_encode_tag_without_update_ac_query_prob(bio, &ac, c0, tag);
+	}
+	float prob_ctx1 = 0;
+	if (ctx_query_tag_item(c1, tag) != NULL) {
+		prob_ctx1 = PROB_CTX1 * ctx_encode_tag_without_update_ac_query_prob(bio, &ac, c1, tag);
+	}
+	float prob_ctx2 = 0;
+	if (ctx_query_tag_item(c2, tag) != NULL) {
+		prob_ctx2 = PROB_CTX2 * ctx_encode_tag_without_update_ac_query_prob(bio, &ac, c2, tag);
+	}
+	float prob_ctx3 = 0;
+	if (ctx_query_tag_item(c3, tag) != NULL) {
+		prob_ctx3 = PROB_CTX3 * ctx_encode_tag_without_update_ac_query_prob(bio, &ac, c3, tag);
+	}
+	float prob_idx1 = PROB_IDX1 * ac_encode_symbol_model_query_prob(&ac, bio, index, &model_index1);
+	float prob_idx2 = 0;
+	if (pindex != (size_t)-1 && index >= pindex) {
+		prob_idx2 = PROB_IDX2 * ac_encode_symbol_model_query_prob(&ac, bio, index - pindex, &model_index2);
+	}
 
-	if (ctx_query_tag_item(c0, tag) != NULL && SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag) < size) {
+	int mode = E_IDX1;
+	float prob = prob_idx1;
+
+	if (prob_ctx0 > prob) {
 		mode = E_CTX0;
-		size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
+		prob = prob_ctx0;
 	}
-	if (ctx_query_tag_item(c1, tag) != NULL && SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag) < size) {
+	if (prob_ctx1 > prob) {
 		mode = E_CTX1;
-		size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
+		prob = prob_ctx1;
 	}
-	if (ctx_query_tag_item(c2, tag) != NULL && SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag) < size) {
+	if (prob_ctx2 > prob) {
 		mode = E_CTX2;
-		size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
+		prob = prob_ctx2;
 	}
-	if (ctx_query_tag_item(c3, tag) != NULL && SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag) < size) {
+	if (prob_ctx3 > prob) {
 		mode = E_CTX3;
-		size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
+		prob = prob_ctx3;
 	}
-	if (pindex != (size_t)-1 && index >= pindex && SIZEOF_BITCODE_IDX2 + gr_sizeof_symb(&gr_idx2, index - pindex) < size) {
+	if (prob_idx2 > prob) {
 		mode = E_IDX2;
-		size = SIZEOF_BITCODE_IDX2 + gr_sizeof_symb(&gr_idx2, index - pindex);
+		prob = prob_idx2;
 	}
+
+	size_t size = ceilf(-log2f(0.5f * prob));
 
 	// encode
 

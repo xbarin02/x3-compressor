@@ -38,6 +38,7 @@ struct model {
 };
 
 void ac_encode_symbol_model(struct ac *ac, struct bio *bio, size_t symb, struct model *model);
+float ac_encode_symbol_model_query_prob(struct ac *ac, struct bio *bio, size_t symb, struct model *model);
 size_t ac_decode_symbol_model(struct ac *ac, struct bio *bio, struct model *model);
 void inc_model(struct model *model, size_t symbol);
 
