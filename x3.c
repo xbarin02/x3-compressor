@@ -47,12 +47,12 @@ void enlarge_ctx0()
 #define SIZEOF_BITCODE_NEW  7
 #define SIZEOF_BITCODE_EOF  8
 
-#define PROB_CTX0 0.50000
-#define PROB_CTX1 1.00000
-#define PROB_CTX2 0.12500
-#define PROB_CTX3 0.03125
-#define PROB_IDX1 0.25000
-#define PROB_IDX2 0.06250
+#define PROB_CTX0 0.250000
+#define PROB_CTX1 0.500000
+#define PROB_CTX2 0.062500
+#define PROB_CTX3 0.015625
+#define PROB_IDX1 0.125000
+#define PROB_IDX2 0.031250
 
 /* WARNING SIZEOF_BITCODE_* do not correspond to E_* + 1 */
 
@@ -300,7 +300,7 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 		prob = prob_idx2;
 	}
 
-	size_t size = ceilf(-log2f(0.5f * prob));
+	size_t size = ceilf(-log2f(prob));
 
 	// encode
 
