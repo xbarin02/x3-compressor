@@ -316,28 +316,24 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 			ctx_encode_tag_without_update_ac(bio, &ac, c0, tag);
 #if (UPDATE_PROBS == 1)
 			PROB_CTX0 += UPDATE_RATE;
-			normalize_probs();
 #endif
 			break;
 		case E_CTX1:
 			ctx_encode_tag_without_update_ac(bio, &ac, c1, tag);
 #if (UPDATE_PROBS == 1)
 			PROB_CTX1 += UPDATE_RATE;
-			normalize_probs();
 #endif
 			break;
 		case E_CTX2:
 			ctx_encode_tag_without_update_ac(bio, &ac, c2, tag);
 #if (UPDATE_PROBS == 1)
 			PROB_CTX2 += UPDATE_RATE;
-			normalize_probs();
 #endif
 			break;
 		case E_CTX3:
 			ctx_encode_tag_without_update_ac(bio, &ac, c3, tag);
 #if (UPDATE_PROBS == 1)
 			PROB_CTX3 += UPDATE_RATE;
-			normalize_probs();
 #endif
 			break;
 		case E_IDX1:
@@ -345,7 +341,6 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 			inc_model(&model_index1, index);
 #if (UPDATE_PROBS == 1)
 			PROB_IDX1 += UPDATE_RATE;
-			normalize_probs();
 #endif
 			break;
 		case E_IDX2:
@@ -353,10 +348,35 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 			inc_model(&model_index2, index - pindex);
 #if (UPDATE_PROBS == 1)
 			PROB_IDX2 += UPDATE_RATE;
-			normalize_probs();
 #endif
 			break;
 	}
+#if (UPDATE_PROBS == 2)
+#	define sqr(x) ((x) * (x))
+		if (prob_ctx0 > 0) {
+			PROB_CTX0 += UPDATE_RATE / sqr(prob / prob_ctx0);
+		}
+		if (prob_ctx1 > 0) {
+			PROB_CTX1 += UPDATE_RATE / sqr(prob / prob_ctx1);
+		}
+		if (prob_ctx2 > 0) {
+			PROB_CTX2 += UPDATE_RATE / sqr(prob / prob_ctx2);
+		}
+		if (prob_ctx3 > 0) {
+			PROB_CTX3 += UPDATE_RATE / sqr(prob / prob_ctx3);
+		}
+		if (prob_idx1 > 0) {
+			PROB_IDX1 += UPDATE_RATE / sqr(prob / prob_idx1);
+		}
+		if (prob_idx2 > 0) {
+			PROB_IDX2 += UPDATE_RATE / sqr(prob / prob_idx2);
+		}
+
+		normalize_probs();
+#endif
+#if (UPDATE_PROBS == 1)
+		normalize_probs();
+#endif
 
 	events[mode]++;
 	sizes[mode] += size;
