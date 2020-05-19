@@ -47,12 +47,27 @@ void enlarge_ctx0()
 #define SIZEOF_BITCODE_NEW  7
 #define SIZEOF_BITCODE_EOF  8
 
-#define PROB_CTX0 0.250000
-#define PROB_CTX1 0.500000
-#define PROB_CTX2 0.062500
-#define PROB_CTX3 0.015625
-#define PROB_IDX1 0.125000
-#define PROB_IDX2 0.031250
+float PROB_CTX0 = 0.250000;
+float PROB_CTX1 = 0.500000;
+float PROB_CTX2 = 0.062500;
+float PROB_CTX3 = 0.015625;
+float PROB_IDX1 = 0.125000;
+float PROB_IDX2 = 0.031250;
+
+#define UPDATE_PROBS 0
+#define UPDATE_RATE 0.001
+
+void normalize_probs()
+{
+	float sum = PROB_CTX0 + PROB_CTX1 + PROB_CTX2 + PROB_CTX3 + PROB_IDX1 + PROB_IDX2;
+
+	PROB_CTX0 /= sum;
+	PROB_CTX1 /= sum;
+	PROB_CTX2 /= sum;
+	PROB_CTX3 /= sum;
+	PROB_IDX1 /= sum;
+	PROB_IDX2 /= sum;
+}
 
 /* WARNING SIZEOF_BITCODE_* do not correspond to E_* + 1 */
 
@@ -299,23 +314,47 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 	switch (mode) {
 		case E_CTX0:
 			ctx_encode_tag_without_update_ac(bio, &ac, c0, tag);
+#if (UPDATE_PROBS == 1)
+			PROB_CTX0 += UPDATE_RATE;
+			normalize_probs();
+#endif
 			break;
 		case E_CTX1:
 			ctx_encode_tag_without_update_ac(bio, &ac, c1, tag);
+#if (UPDATE_PROBS == 1)
+			PROB_CTX1 += UPDATE_RATE;
+			normalize_probs();
+#endif
 			break;
 		case E_CTX2:
 			ctx_encode_tag_without_update_ac(bio, &ac, c2, tag);
+#if (UPDATE_PROBS == 1)
+			PROB_CTX2 += UPDATE_RATE;
+			normalize_probs();
+#endif
 			break;
 		case E_CTX3:
 			ctx_encode_tag_without_update_ac(bio, &ac, c3, tag);
+#if (UPDATE_PROBS == 1)
+			PROB_CTX3 += UPDATE_RATE;
+			normalize_probs();
+#endif
 			break;
 		case E_IDX1:
 			ac_encode_symbol_model(&ac, bio, index, &model_index1);
 			inc_model(&model_index1, index);
+#if (UPDATE_PROBS == 1)
+			PROB_IDX1 += UPDATE_RATE;
+			normalize_probs();
+#endif
 			break;
 		case E_IDX2:
 			ac_encode_symbol_model(&ac, bio, index - pindex, &model_index2);
 			inc_model(&model_index2, index - pindex);
+#if (UPDATE_PROBS == 1)
+			PROB_IDX2 += UPDATE_RATE;
+			normalize_probs();
+#endif
 			break;
 	}
 
@@ -785,6 +824,8 @@ int main(int argc, char *argv[])
 		bio_open(&bio, optr, optr + isize * 2, BIO_MODE_WRITE);
 
 		ac_init(&ac);
+
+		normalize_probs();
 
 		long start = wall_clock();
 
