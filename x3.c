@@ -351,6 +351,9 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 #endif
 			break;
 	}
+#if (UPDATE_PROBS == 1)
+		normalize_probs();
+#endif
 #if (UPDATE_PROBS == 2)
 #	define sqr(x) ((x) * (x))
 		if (prob_ctx0 > 0) {
@@ -371,10 +374,29 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 		if (prob_idx2 > 0) {
 			PROB_IDX2 += UPDATE_RATE / sqr(prob / prob_idx2);
 		}
-
+#	undef sqr
 		normalize_probs();
 #endif
-#if (UPDATE_PROBS == 1)
+#if (UPDATE_PROBS == 3)
+		if (prob_ctx0 > 0) {
+			PROB_CTX0 += UPDATE_RATE * expf(-prob / prob_ctx0);
+		}
+		if (prob_ctx1 > 0) {
+			PROB_CTX1 += UPDATE_RATE * expf(-prob / prob_ctx1);
+		}
+		if (prob_ctx2 > 0) {
+			PROB_CTX2 += UPDATE_RATE * expf(-prob / prob_ctx2);
+		}
+		if (prob_ctx3 > 0) {
+			PROB_CTX3 += UPDATE_RATE * expf(-prob / prob_ctx3);
+		}
+		if (prob_idx1 > 0) {
+			PROB_IDX1 += UPDATE_RATE * expf(-prob / prob_idx1);
+		}
+		if (prob_idx2 > 0) {
+			PROB_IDX2 += UPDATE_RATE * expf(-prob / prob_idx2);
+		}
+
 		normalize_probs();
 #endif
 
