@@ -54,8 +54,8 @@ float PROB_CTX3 = 0.015625;
 float PROB_IDX1 = 0.125000;
 float PROB_IDX2 = 0.031250;
 
-#define UPDATE_PROBS 0
-#define UPDATE_RATE 0.001
+#define UPDATE_PROBS 1
+#define UPDATE_RATE 0.0001
 
 void normalize_probs()
 {
@@ -970,6 +970,15 @@ int main(int argc, char *argv[])
 	);
 
 	fprintf(stderr, "context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536, (size_t)256);
+
+#if 0
+	fprintf(stderr, "float PROB_CTX0 = %f;\n", PROB_CTX0);
+	fprintf(stderr, "float PROB_CTX1 = %f;\n", PROB_CTX1);
+	fprintf(stderr, "float PROB_CTX2 = %f;\n", PROB_CTX2);
+	fprintf(stderr, "float PROB_CTX3 = %f;\n", PROB_CTX3);
+	fprintf(stderr, "float PROB_IDX1 = %f;\n", PROB_IDX1);
+	fprintf(stderr, "float PROB_IDX2 = %f;\n", PROB_IDX2);
+#endif
 
 	return 0;
 }
