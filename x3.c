@@ -260,24 +260,24 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 
 	float prob_ctx0 = 0;
 	if (ctx_query_tag_item(c0, tag) != NULL) {
-		prob_ctx0 = PROB_CTX0 * ctx_encode_tag_without_update_ac_query_prob(bio, &ac, c0, tag);
+		prob_ctx0 = PROB_CTX0 * ctx_encode_tag_without_update_ac_query_prob(c0, tag);
 	}
 	float prob_ctx1 = 0;
 	if (ctx_query_tag_item(c1, tag) != NULL) {
-		prob_ctx1 = PROB_CTX1 * ctx_encode_tag_without_update_ac_query_prob(bio, &ac, c1, tag);
+		prob_ctx1 = PROB_CTX1 * ctx_encode_tag_without_update_ac_query_prob(c1, tag);
 	}
 	float prob_ctx2 = 0;
 	if (ctx_query_tag_item(c2, tag) != NULL) {
-		prob_ctx2 = PROB_CTX2 * ctx_encode_tag_without_update_ac_query_prob(bio, &ac, c2, tag);
+		prob_ctx2 = PROB_CTX2 * ctx_encode_tag_without_update_ac_query_prob(c2, tag);
 	}
 	float prob_ctx3 = 0;
 	if (ctx_query_tag_item(c3, tag) != NULL) {
-		prob_ctx3 = PROB_CTX3 * ctx_encode_tag_without_update_ac_query_prob(bio, &ac, c3, tag);
+		prob_ctx3 = PROB_CTX3 * ctx_encode_tag_without_update_ac_query_prob(c3, tag);
 	}
-	float prob_idx1 = PROB_IDX1 * ac_encode_symbol_model_query_prob(&ac, bio, index, &model_index1);
+	float prob_idx1 = PROB_IDX1 * ac_encode_symbol_model_query_prob(index, &model_index1);
 	float prob_idx2 = 0;
 	if (pindex != (size_t)-1 && index >= pindex) {
-		prob_idx2 = PROB_IDX2 * ac_encode_symbol_model_query_prob(&ac, bio, index - pindex, &model_index2);
+		prob_idx2 = PROB_IDX2 * ac_encode_symbol_model_query_prob(index - pindex, &model_index2);
 	}
 
 	int mode = E_IDX1;

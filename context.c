@@ -155,7 +155,7 @@ void ctx_encode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct c
 	model_destroy(&model);
 }
 
-float ctx_encode_tag_without_update_ac_query_prob(struct bio *bio_a, struct ac *ac, struct ctx *ctx, size_t tag)
+float ctx_encode_tag_without_update_ac_query_prob(struct ctx *ctx, size_t tag)
 {
 	struct model model;
 	model_create(&model, ctx->items);
@@ -169,7 +169,7 @@ float ctx_encode_tag_without_update_ac_query_prob(struct bio *bio_a, struct ac *
 
 	size_t item_index = ctx_query_tag_index(ctx, tag);
 
-	float prob = ac_encode_symbol_model_query_prob(ac, bio_a, item_index, &model);
+	float prob = ac_encode_symbol_model_query_prob(item_index, &model);
 
 	model_destroy(&model);
 

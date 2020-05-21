@@ -36,7 +36,7 @@ size_t ctx_sizeof_tag(struct ctx *ctx, size_t tag);
 
 void ctx_encode_tag_without_update(struct bio *bio, struct ctx *ctx, size_t tag);
 void ctx_encode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct ctx *ctx, size_t tag);
-float ctx_encode_tag_without_update_ac_query_prob(struct bio *bio_a, struct ac *ac, struct ctx *ctx, size_t tag);
+float ctx_encode_tag_without_update_ac_query_prob(struct ctx *ctx, size_t tag);
 
 size_t ctx_decode_tag_without_update(struct bio *bio, struct ctx *ctx);
 size_t ctx_decode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct ctx *ctx);
