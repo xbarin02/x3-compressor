@@ -523,10 +523,12 @@ void encode_match(struct bio *bio, char *p, size_t len)
 void decode_match(struct bio *bio, char *p, size_t *p_len)
 {
 	*p_len = ac_decode_symbol_model(&ac, bio, &model_match_size) + 1;
+	sizes[E_NEW] += prob_to_bits(ac_encode_symbol_model_query_prob(*p_len - 1, &model_match_size));
 	inc_model(&model_match_size, *p_len - 1);
 
 	for (size_t c = 0; c < *p_len; ++c) {
 		p[c] = (char)ac_decode_symbol_model(&ac, bio, &model_chars);
+		sizes[E_NEW] += prob_to_bits(ac_encode_symbol_model_query_prob((unsigned char)p[c], &model_chars));
 		inc_model(&model_chars, (unsigned char)p[c]);
 	}
 }
@@ -582,8 +584,6 @@ char *decompress(char *ptr, struct bio *bio)
 			pindex = (size_t)-1;
 
 			events[E_NEW]++;
-
-			sizes[E_NEW] += MATCH_LOGSIZE + 8 * len;
 		} else {
 			/* in dictionary */
 
