@@ -95,6 +95,11 @@ struct model model_chars;
 struct model model_index1;
 struct model model_index2;
 
+float prob_to_bits(float prob)
+{
+	return -log2f(prob);
+}
+
 /* return index */
 size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t context1, size_t context2, size_t pindex)
 {
@@ -304,7 +309,7 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 		prob = prob_idx2;
 	}
 
-	size_t size = ceilf(-log2f(prob));
+	size_t size = ceilf(prob_to_bits(prob));
 
 	// encode
 
@@ -508,18 +513,27 @@ void create()
 
 void encode_match(struct bio *bio, char *p, size_t len)
 {
+	float prob;
+
+	prob = ac_encode_symbol_model_query_prob(E_NEW, &model_events);
 	ac_encode_symbol_model(&ac, bio, E_NEW, &model_events);
 	inc_model(&model_events, E_NEW);
 
 	assert(len > 0 && len <= (1 << MATCH_LOGSIZE));
 
+	prob *= ac_encode_symbol_model_query_prob(len - 1, &model_match_size);
 	ac_encode_symbol_model(&ac, bio, len - 1, &model_match_size);
 	inc_model(&model_match_size, len - 1);
 
 	for (size_t c = 0; c < len; ++c) {
+		prob *= ac_encode_symbol_model_query_prob((unsigned char)p[c], &model_chars);
 		ac_encode_symbol_model(&ac, bio, (unsigned char)p[c], &model_chars);
 		inc_model(&model_chars, (unsigned char)p[c]);
 	}
+
+	sizes[E_NEW] += (size_t)ceil(prob_to_bits(prob));
+	events[E_NEW]++;
+	stream_size_raw_str += 8 * len;
 }
 
 void decode_match(struct bio *bio, char *p, size_t *p_len)
@@ -691,11 +705,6 @@ void compress(char *ptr, size_t size, struct bio *bio)
 			dict_update_costs(p);
 
 			pindex = (size_t)-1;
-
-			events[E_NEW]++;
-
-			sizes[E_NEW] += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len;
-			stream_size_raw_str += 8 * len;
 		}
 	}
 
