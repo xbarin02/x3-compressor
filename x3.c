@@ -116,7 +116,7 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 
 	size_t tag;
 	size_t index;
-	size_t size; /* for stats */
+	float size; /* for stats */
 	switch (decision) {
 		case E_CTX0:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c0);
@@ -140,15 +140,15 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 			break;
 		case E_IDX1:
 			index = ac_decode_symbol_model(&ac, bio, &model_index1);
+			size = prob_to_bits(ac_encode_symbol_model_query_prob(index, &model_index1));
 			inc_model(&model_index1, index);
 			tag = dict_get_tag_by_index(index);
-			size = gr_sizeof_symb(&gr_idx1, index);
 			break;
 		case E_IDX2:
 			index = ac_decode_symbol_model(&ac, bio, &model_index2) + pindex;
+			size = prob_to_bits(ac_encode_symbol_model_query_prob(index - pindex, &model_index2));
 			inc_model(&model_index2, index - pindex);
 			tag = dict_get_tag_by_index(index);
-			size = gr_sizeof_symb(&gr_idx2, index - pindex);
 			break;
 		default:
 			abort();
