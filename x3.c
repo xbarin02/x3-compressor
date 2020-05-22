@@ -25,8 +25,6 @@ struct ctx ctx3[256];    /* last byte */
 struct gr gr_idx1; /* for E_IDX1 */
 struct gr gr_idx2; /* for E_IDX2 */
 
-size_t stream_size_raw_str = 0;
-
 void enlarge_ctx1()
 {
 	ctx1 = ctx_enlarge(ctx1, dict_get_size(), dict_get_elems());
@@ -123,34 +121,34 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 		case E_CTX0:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c0);
 			index = dict_get_index_by_tag(tag);
-			size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
+			size = ctx_sizeof_tag(c0, tag);
 			break;
 		case E_CTX1:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c1);
 			index = dict_get_index_by_tag(tag);
-			size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
+			size = ctx_sizeof_tag(c1, tag);
 			break;
 		case E_CTX2:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c2);
 			index = dict_get_index_by_tag(tag);
-			size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
+			size = ctx_sizeof_tag(c2, tag);
 			break;
 		case E_CTX3:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c3);
 			index = dict_get_index_by_tag(tag);
-			size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
+			size = ctx_sizeof_tag(c3, tag);
 			break;
 		case E_IDX1:
 			index = ac_decode_symbol_model(&ac, bio, &model_index1);
 			inc_model(&model_index1, index);
 			tag = dict_get_tag_by_index(index);
-			size = SIZEOF_BITCODE_IDX1 + gr_sizeof_symb(&gr_idx1, index);
+			size = gr_sizeof_symb(&gr_idx1, index);
 			break;
 		case E_IDX2:
 			index = ac_decode_symbol_model(&ac, bio, &model_index2) + pindex;
 			inc_model(&model_index2, index - pindex);
 			tag = dict_get_tag_by_index(index);
-			size = SIZEOF_BITCODE_IDX2 + gr_sizeof_symb(&gr_idx2, index - pindex);
+			size = gr_sizeof_symb(&gr_idx2, index - pindex);
 			break;
 		default:
 			abort();
@@ -520,7 +518,6 @@ void encode_match(struct bio *bio, char *p, size_t len)
 	}
 
 	events[E_NEW]++;
-	stream_size_raw_str += 8 * len;
 }
 
 void decode_match(struct bio *bio, char *p, size_t *p_len)
@@ -545,6 +542,7 @@ char *decompress(char *ptr, struct bio *bio)
 
 	for (;;) {
 		size_t decision = ac_decode_symbol_model(&ac, bio, &model_events);
+		sizes[decision] += prob_to_bits(ac_encode_symbol_model_query_prob(decision, &model_events));
 		inc_model(&model_events, decision);
 
 		if (decision == E_EOF) {
@@ -585,8 +583,7 @@ char *decompress(char *ptr, struct bio *bio)
 
 			events[E_NEW]++;
 
-			sizes[E_NEW] += SIZEOF_BITCODE_NEW + MATCH_LOGSIZE + 8 * len;
-			stream_size_raw_str += 8 * len;
+			sizes[E_NEW] += MATCH_LOGSIZE + 8 * len;
 		} else {
 			/* in dictionary */
 
@@ -939,10 +936,9 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "output stream size: %zu\n", (stream_size + 7) / 8);
 	fprintf(stderr, "dictionary: hit %zu, miss %zu\n", dict_hit_count, events[E_NEW]);
 
-	fprintf(stderr, "codestream size: dictionary %zu / %f%%, new fragment %zu / %f%% (of which text %zu / %f%%)\n",
+	fprintf(stderr, "codestream size: dictionary %zu / %f%%, new fragment %zu / %f%%\n",
 		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
-		((size_t)ceil(sizes[E_NEW]) + 7) / 8, 100.f * (size_t)ceil(sizes[E_NEW]) / stream_size,
-		(stream_size_raw_str + 7) / 8, 100.f * stream_size_raw_str / stream_size
+		((size_t)ceil(sizes[E_NEW]) + 7) / 8, 100.f * (size_t)ceil(sizes[E_NEW]) / stream_size
 	);
 
 #if 1
