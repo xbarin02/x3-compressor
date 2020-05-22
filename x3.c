@@ -512,27 +512,22 @@ void create()
 
 void encode_match(struct bio *bio, char *p, size_t len)
 {
-	float prob;
-
-	prob = ac_encode_symbol_model_query_prob(E_NEW, &model_events);
+	sizes[E_NEW] += prob_to_bits(ac_encode_symbol_model_query_prob(E_NEW, &model_events));
 	ac_encode_symbol_model(&ac, bio, E_NEW, &model_events);
 	inc_model(&model_events, E_NEW);
 
 	assert(len > 0 && len <= (1 << MATCH_LOGSIZE));
 
-	prob *= ac_encode_symbol_model_query_prob(len - 1, &model_match_size);
+	sizes[E_NEW] += prob_to_bits(ac_encode_symbol_model_query_prob(len - 1, &model_match_size));
 	ac_encode_symbol_model(&ac, bio, len - 1, &model_match_size);
 	inc_model(&model_match_size, len - 1);
 
 	for (size_t c = 0; c < len; ++c) {
-		prob *= ac_encode_symbol_model_query_prob((unsigned char)p[c], &model_chars);
+		sizes[E_NEW] += prob_to_bits(ac_encode_symbol_model_query_prob((unsigned char)p[c], &model_chars));
 		ac_encode_symbol_model(&ac, bio, (unsigned char)p[c], &model_chars);
 		inc_model(&model_chars, (unsigned char)p[c]);
 	}
 
-	if (prob > 0) {
-		sizes[E_NEW] += prob_to_bits(prob);
-	}
 	events[E_NEW]++;
 	stream_size_raw_str += 8 * len;
 }
