@@ -116,7 +116,6 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 	struct ctx *c2 = ctx2 + context2;
 	struct ctx *c3 = ctx3 + (context2 & 255);
 
-	int mode; /* for stats */
 	size_t tag;
 	size_t index;
 	size_t size; /* for stats */
@@ -124,72 +123,66 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 		case E_CTX0:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c0);
 			index = dict_get_index_by_tag(tag);
-			mode = E_CTX0;
 			size = SIZEOF_BITCODE_CTX0 + ctx_sizeof_tag(c0, tag);
 			break;
 		case E_CTX1:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c1);
 			index = dict_get_index_by_tag(tag);
-			mode = E_CTX1;
 			size = SIZEOF_BITCODE_CTX1 + ctx_sizeof_tag(c1, tag);
 			break;
 		case E_CTX2:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c2);
 			index = dict_get_index_by_tag(tag);
-			mode = E_CTX2;
 			size = SIZEOF_BITCODE_CTX2 + ctx_sizeof_tag(c2, tag);
 			break;
 		case E_CTX3:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c3);
 			index = dict_get_index_by_tag(tag);
-			mode = E_CTX3;
 			size = SIZEOF_BITCODE_CTX3 + ctx_sizeof_tag(c3, tag);
 			break;
 		case E_IDX1:
 			index = ac_decode_symbol_model(&ac, bio, &model_index1);
 			inc_model(&model_index1, index);
 			tag = dict_get_tag_by_index(index);
-			mode = E_IDX1;
 			size = SIZEOF_BITCODE_IDX1 + gr_sizeof_symb(&gr_idx1, index);
 			break;
 		case E_IDX2:
 			index = ac_decode_symbol_model(&ac, bio, &model_index2) + pindex;
 			inc_model(&model_index2, index - pindex);
 			tag = dict_get_tag_by_index(index);
-			mode = E_IDX2;
 			size = SIZEOF_BITCODE_IDX2 + gr_sizeof_symb(&gr_idx2, index - pindex);
 			break;
 		default:
 			abort();
 	}
 
-	events[mode]++;
-	sizes[mode] += size;
+	events[decision]++;
+	sizes[decision] += size;
 
 	// update Golomb-Rice models
 
-	// mode = E_CTX0
+	// decision = E_CTX0
 	if (ctx_query_tag_item(c0, tag) != NULL) {
 		ctx_encode_tag(c0, tag);
 	}
-	// mode = E_CTX1
+	// decision = E_CTX1
 	if (ctx_query_tag_item(c1, tag) != NULL) {
 		ctx_encode_tag(c1, tag);
 	}
-	// mode = E_CTX2
+	// decision = E_CTX2
 	if (ctx_query_tag_item(c2, tag) != NULL) {
 		ctx_encode_tag(c2, tag);
 	}
-	// mode = E_CTX3
+	// decision = E_CTX3
 	if (ctx_query_tag_item(c3, tag) != NULL) {
 		ctx_encode_tag(c3, tag);
 	}
-	// mode = E_IDX1
-	if (mode == E_IDX1) {
+	// decision = E_IDX1
+	if (decision == E_IDX1) {
 		gr_update_model(&gr_idx1, index);
 	}
-	// mode = E_IDX2
-	if (mode == E_IDX2) {
+	// decision = E_IDX2
+	if (decision == E_IDX2) {
 		gr_update_model(&gr_idx2, index - pindex);
 	}
 
@@ -308,8 +301,6 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 		prob = prob_idx2;
 	}
 
-	float size = prob_to_bits(prob);
-
 	// encode
 
 	ac_encode_symbol_model(&ac, bio, mode, &model_events);
@@ -405,7 +396,7 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 #endif
 
 	events[mode]++;
-	sizes[mode] += size;
+	sizes[mode] += prob_to_bits(prob);
 
 	// update Golomb-Rice models
 
