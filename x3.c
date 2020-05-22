@@ -120,23 +120,23 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 	switch (decision) {
 		case E_CTX0:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c0);
+			size = prob_to_bits(ctx_encode_tag_without_update_ac_query_prob(c0, tag));
 			index = dict_get_index_by_tag(tag);
-			size = ctx_sizeof_tag(c0, tag);
 			break;
 		case E_CTX1:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c1);
+			size = prob_to_bits(ctx_encode_tag_without_update_ac_query_prob(c1, tag));
 			index = dict_get_index_by_tag(tag);
-			size = ctx_sizeof_tag(c1, tag);
 			break;
 		case E_CTX2:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c2);
+			size = prob_to_bits(ctx_encode_tag_without_update_ac_query_prob(c2, tag));
 			index = dict_get_index_by_tag(tag);
-			size = ctx_sizeof_tag(c2, tag);
 			break;
 		case E_CTX3:
 			tag = ctx_decode_tag_without_update_ac(bio, &ac, c3);
+			size = prob_to_bits(ctx_encode_tag_without_update_ac_query_prob(c3, tag));
 			index = dict_get_index_by_tag(tag);
-			size = ctx_sizeof_tag(c3, tag);
 			break;
 		case E_IDX1:
 			index = ac_decode_symbol_model(&ac, bio, &model_index1);
