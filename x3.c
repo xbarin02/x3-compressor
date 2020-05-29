@@ -52,21 +52,6 @@ float PROB_CTX3 = 0.015625;
 float PROB_IDX1 = 0.125000;
 float PROB_IDX2 = 0.031250;
 
-#define UPDATE_PROBS 1
-#define UPDATE_RATE 0.0001
-
-void normalize_probs()
-{
-	float sum = PROB_CTX0 + PROB_CTX1 + PROB_CTX2 + PROB_CTX3 + PROB_IDX1 + PROB_IDX2;
-
-	PROB_CTX0 /= sum;
-	PROB_CTX1 /= sum;
-	PROB_CTX2 /= sum;
-	PROB_CTX3 /= sum;
-	PROB_IDX1 /= sum;
-	PROB_IDX2 /= sum;
-}
-
 /* WARNING SIZEOF_BITCODE_* do not correspond to E_* + 1 */
 
 /* list of events */
@@ -255,24 +240,24 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 
 	float prob_ctx0 = 0;
 	if (ctx_query_tag_item(c0, tag) != NULL) {
-		prob_ctx0 = PROB_CTX0 * ctx_encode_tag_without_update_ac_query_prob(c0, tag);
+		prob_ctx0 = ac_encode_symbol_model_query_prob(E_CTX0, &model_events) * ctx_encode_tag_without_update_ac_query_prob(c0, tag);
 	}
 	float prob_ctx1 = 0;
 	if (ctx_query_tag_item(c1, tag) != NULL) {
-		prob_ctx1 = PROB_CTX1 * ctx_encode_tag_without_update_ac_query_prob(c1, tag);
+		prob_ctx1 = ac_encode_symbol_model_query_prob(E_CTX1, &model_events) * ctx_encode_tag_without_update_ac_query_prob(c1, tag);
 	}
 	float prob_ctx2 = 0;
 	if (ctx_query_tag_item(c2, tag) != NULL) {
-		prob_ctx2 = PROB_CTX2 * ctx_encode_tag_without_update_ac_query_prob(c2, tag);
+		prob_ctx2 = ac_encode_symbol_model_query_prob(E_CTX2, &model_events) * ctx_encode_tag_without_update_ac_query_prob(c2, tag);
 	}
 	float prob_ctx3 = 0;
 	if (ctx_query_tag_item(c3, tag) != NULL) {
-		prob_ctx3 = PROB_CTX3 * ctx_encode_tag_without_update_ac_query_prob(c3, tag);
+		prob_ctx3 = ac_encode_symbol_model_query_prob(E_CTX3, &model_events) * ctx_encode_tag_without_update_ac_query_prob(c3, tag);
 	}
-	float prob_idx1 = PROB_IDX1 * ac_encode_symbol_model_query_prob(index, &model_index1);
+	float prob_idx1 = ac_encode_symbol_model_query_prob(E_IDX1, &model_events) * ac_encode_symbol_model_query_prob(index, &model_index1);
 	float prob_idx2 = 0;
 	if (pindex != (size_t)-1 && index >= pindex) {
-		prob_idx2 = PROB_IDX2 * ac_encode_symbol_model_query_prob(index - pindex, &model_index2);
+		prob_idx2 = ac_encode_symbol_model_query_prob(E_IDX2, &model_events) * ac_encode_symbol_model_query_prob(index - pindex, &model_index2);
 	}
 
 	int mode = E_IDX1;
@@ -307,91 +292,25 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 	switch (mode) {
 		case E_CTX0:
 			ctx_encode_tag_without_update_ac(bio, &ac, c0, tag);
-#if (UPDATE_PROBS == 1)
-			PROB_CTX0 += UPDATE_RATE;
-#endif
 			break;
 		case E_CTX1:
 			ctx_encode_tag_without_update_ac(bio, &ac, c1, tag);
-#if (UPDATE_PROBS == 1)
-			PROB_CTX1 += UPDATE_RATE;
-#endif
 			break;
 		case E_CTX2:
 			ctx_encode_tag_without_update_ac(bio, &ac, c2, tag);
-#if (UPDATE_PROBS == 1)
-			PROB_CTX2 += UPDATE_RATE;
-#endif
 			break;
 		case E_CTX3:
 			ctx_encode_tag_without_update_ac(bio, &ac, c3, tag);
-#if (UPDATE_PROBS == 1)
-			PROB_CTX3 += UPDATE_RATE;
-#endif
 			break;
 		case E_IDX1:
 			ac_encode_symbol_model(&ac, bio, index, &model_index1);
 			inc_model(&model_index1, index);
-#if (UPDATE_PROBS == 1)
-			PROB_IDX1 += UPDATE_RATE;
-#endif
 			break;
 		case E_IDX2:
 			ac_encode_symbol_model(&ac, bio, index - pindex, &model_index2);
 			inc_model(&model_index2, index - pindex);
-#if (UPDATE_PROBS == 1)
-			PROB_IDX2 += UPDATE_RATE;
-#endif
 			break;
 	}
-#if (UPDATE_PROBS == 1)
-		normalize_probs();
-#endif
-#if (UPDATE_PROBS == 2)
-#	define sqr(x) ((x) * (x))
-		if (prob_ctx0 > 0) {
-			PROB_CTX0 += UPDATE_RATE / sqr(prob / prob_ctx0);
-		}
-		if (prob_ctx1 > 0) {
-			PROB_CTX1 += UPDATE_RATE / sqr(prob / prob_ctx1);
-		}
-		if (prob_ctx2 > 0) {
-			PROB_CTX2 += UPDATE_RATE / sqr(prob / prob_ctx2);
-		}
-		if (prob_ctx3 > 0) {
-			PROB_CTX3 += UPDATE_RATE / sqr(prob / prob_ctx3);
-		}
-		if (prob_idx1 > 0) {
-			PROB_IDX1 += UPDATE_RATE / sqr(prob / prob_idx1);
-		}
-		if (prob_idx2 > 0) {
-			PROB_IDX2 += UPDATE_RATE / sqr(prob / prob_idx2);
-		}
-#	undef sqr
-		normalize_probs();
-#endif
-#if (UPDATE_PROBS == 3)
-		if (prob_ctx0 > 0) {
-			PROB_CTX0 += UPDATE_RATE * expf(-prob / prob_ctx0);
-		}
-		if (prob_ctx1 > 0) {
-			PROB_CTX1 += UPDATE_RATE * expf(-prob / prob_ctx1);
-		}
-		if (prob_ctx2 > 0) {
-			PROB_CTX2 += UPDATE_RATE * expf(-prob / prob_ctx2);
-		}
-		if (prob_ctx3 > 0) {
-			PROB_CTX3 += UPDATE_RATE * expf(-prob / prob_ctx3);
-		}
-		if (prob_idx1 > 0) {
-			PROB_IDX1 += UPDATE_RATE * expf(-prob / prob_idx1);
-		}
-		if (prob_idx2 > 0) {
-			PROB_IDX2 += UPDATE_RATE * expf(-prob / prob_idx2);
-		}
-
-		normalize_probs();
-#endif
 
 	events[mode]++;
 	sizes[mode] += prob_to_bits(prob);
@@ -493,6 +412,18 @@ void create()
 
 	/* initialize AC models */
 	model_create(&model_events, 8);
+
+	/* initial frequencies in model_events */
+	model_events.table[E_CTX0].freq = 5000 * PROB_CTX0 + 1;
+	model_events.table[E_CTX1].freq = 2000 * PROB_CTX1 + 1;
+	model_events.table[E_CTX2].freq = 100 * PROB_CTX2 + 1;
+	model_events.table[E_CTX3].freq = 1;
+	model_events.table[E_IDX1].freq = 1;
+	model_events.table[E_IDX2].freq = 1;
+	model_events.table[E_NEW ].freq = 1;
+	count_cum_freqs(model_events.table, model_events.count);
+	model_events.total = calc_total_freq(model_events.table, model_events.count);
+
 	model_create(&model_match_size, 1 << MATCH_LOGSIZE);
 	model_create(&model_chars, 256);
 	model_create(&model_index1, 0);
@@ -860,8 +791,6 @@ int main(int argc, char *argv[])
 
 		ac_init(&ac);
 
-		normalize_probs();
-
 		long start = wall_clock();
 
 		compress(iptr, isize, &bio);
@@ -964,12 +893,12 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536, (size_t)256);
 
 #if 0
-	fprintf(stderr, "float PROB_CTX0 = %f;\n", PROB_CTX0);
-	fprintf(stderr, "float PROB_CTX1 = %f;\n", PROB_CTX1);
-	fprintf(stderr, "float PROB_CTX2 = %f;\n", PROB_CTX2);
-	fprintf(stderr, "float PROB_CTX3 = %f;\n", PROB_CTX3);
-	fprintf(stderr, "float PROB_IDX1 = %f;\n", PROB_IDX1);
-	fprintf(stderr, "float PROB_IDX2 = %f;\n", PROB_IDX2);
+	fprintf(stderr, "float PROB_CTX0 = %f;\n", ac_encode_symbol_model_query_prob(E_CTX0, &model_events));
+	fprintf(stderr, "float PROB_CTX1 = %f;\n", ac_encode_symbol_model_query_prob(E_CTX1, &model_events));
+	fprintf(stderr, "float PROB_CTX2 = %f;\n", ac_encode_symbol_model_query_prob(E_CTX2, &model_events));
+	fprintf(stderr, "float PROB_CTX3 = %f;\n", ac_encode_symbol_model_query_prob(E_CTX3, &model_events));
+	fprintf(stderr, "float PROB_IDX1 = %f;\n", ac_encode_symbol_model_query_prob(E_IDX1, &model_events));
+	fprintf(stderr, "float PROB_IDX2 = %f;\n", ac_encode_symbol_model_query_prob(E_IDX2, &model_events));
 #endif
 
 	return 0;
