@@ -35,25 +35,6 @@ void enlarge_ctx0()
 	ctx0 = ctx_enlarge(ctx0, tag_pair_get_size(), tag_pair_get_elems());
 }
 
-/* unary codes for individual code-stream events */
-#define SIZEOF_BITCODE_CTX1 1
-#define SIZEOF_BITCODE_CTX0 2
-#define SIZEOF_BITCODE_IDX1 3
-#define SIZEOF_BITCODE_CTX2 4
-#define SIZEOF_BITCODE_IDX2 5
-#define SIZEOF_BITCODE_CTX3 6
-#define SIZEOF_BITCODE_NEW  7
-#define SIZEOF_BITCODE_EOF  8
-
-float PROB_CTX0 = 0.250000;
-float PROB_CTX1 = 0.500000;
-float PROB_CTX2 = 0.062500;
-float PROB_CTX3 = 0.015625;
-float PROB_IDX1 = 0.125000;
-float PROB_IDX2 = 0.031250;
-
-/* WARNING SIZEOF_BITCODE_* do not correspond to E_* + 1 */
-
 /* list of events */
 enum {
 	E_CTX0 = 0, /* tag in ctx0 */
@@ -414,9 +395,9 @@ void create()
 	model_create(&model_events, 8);
 
 	/* initial frequencies in model_events */
-	model_events.table[E_CTX0].freq = 5000 * PROB_CTX0 + 1;
-	model_events.table[E_CTX1].freq = 2000 * PROB_CTX1 + 1;
-	model_events.table[E_CTX2].freq = 100 * PROB_CTX2 + 1;
+	model_events.table[E_CTX0].freq = 1250 + 1;
+	model_events.table[E_CTX1].freq = 1000 + 1;
+	model_events.table[E_CTX2].freq = 6 + 1;
 	model_events.table[E_CTX3].freq = 1;
 	model_events.table[E_IDX1].freq = 1;
 	model_events.table[E_IDX2].freq = 1;
