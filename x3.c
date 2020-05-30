@@ -120,25 +120,6 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 	events[decision]++;
 	sizes[decision] += size;
 
-	// update Golomb-Rice models
-
-	// decision = E_CTX0
-	if (ctx_query_tag_item(c0, tag) != NULL) {
-		ctx_encode_tag(c0, tag);
-	}
-	// decision = E_CTX1
-	if (ctx_query_tag_item(c1, tag) != NULL) {
-		ctx_encode_tag(c1, tag);
-	}
-	// decision = E_CTX2
-	if (ctx_query_tag_item(c2, tag) != NULL) {
-		ctx_encode_tag(c2, tag);
-	}
-	// decision = E_CTX3
-	if (ctx_query_tag_item(c3, tag) != NULL) {
-		ctx_encode_tag(c3, tag);
-	}
-
 	// update contexts
 
 	if (ctx_query_tag_item(c0, tag) == NULL) {
@@ -285,25 +266,6 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 	events[mode]++;
 	sizes[mode] += prob_to_bits(prob);
 
-	// update Golomb-Rice models
-
-	// mode = E_CTX0
-	if (ctx_query_tag_item(c0, tag) != NULL) {
-		ctx_encode_tag(c0, tag);
-	}
-	// mode = E_CTX1
-	if (ctx_query_tag_item(c1, tag) != NULL) {
-		ctx_encode_tag(c1, tag);
-	}
-	// mode = E_CTX2
-	if (ctx_query_tag_item(c2, tag) != NULL) {
-		ctx_encode_tag(c2, tag);
-	}
-	// mode = E_CTX3
-	if (ctx_query_tag_item(c3, tag) != NULL) {
-		ctx_encode_tag(c3, tag);
-	}
-
 	// update contexts
 
 	if (ctx_query_tag_item(c0, tag) == NULL) {
@@ -357,14 +319,6 @@ void create()
 {
 	dict_enlarge();
 	enlarge_ctx1();
-
-	for (size_t e = 0; e < 65536; ++e) {
-		gr_init(&ctx2[e].gr, 0);
-	}
-
-	for (size_t e = 0; e < 256; ++e) {
-		gr_init(&ctx3[e].gr, 0);
-	}
 
 	tag_pair_enlarge();
 	enlarge_ctx0();
