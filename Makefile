@@ -30,7 +30,7 @@ endif
 .PHONY: all
 all: $(BIN)
 
-x3: x3.o backend.o file.o dict.o gr.o tag_pair.o utils.o bio.o context.o ac.o
+x3: x3.o backend.o file.o dict.o tag_pair.o utils.o bio.o context.o ac.o
 
 .PHONY: clean
 clean:
