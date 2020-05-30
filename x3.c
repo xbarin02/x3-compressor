@@ -22,9 +22,6 @@ struct ctx *ctx1 = NULL; /* previous tag */
 struct ctx ctx2[65536];  /* last two bytes */
 struct ctx ctx3[256];    /* last byte */
 
-struct gr gr_idx1; /* for E_IDX1 */
-struct gr gr_idx2; /* for E_IDX2 */
-
 void enlarge_ctx1()
 {
 	ctx1 = ctx_enlarge(ctx1, dict_get_size(), dict_get_elems());
@@ -140,14 +137,6 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 	// decision = E_CTX3
 	if (ctx_query_tag_item(c3, tag) != NULL) {
 		ctx_encode_tag(c3, tag);
-	}
-	// decision = E_IDX1
-	if (decision == E_IDX1) {
-		gr_update_model(&gr_idx1, index);
-	}
-	// decision = E_IDX2
-	if (decision == E_IDX2) {
-		gr_update_model(&gr_idx2, index - pindex);
 	}
 
 	// update contexts
@@ -314,14 +303,6 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 	if (ctx_query_tag_item(c3, tag) != NULL) {
 		ctx_encode_tag(c3, tag);
 	}
-	// mode = E_IDX1
-	if (mode == E_IDX1) {
-		gr_update_model(&gr_idx1, index);
-	}
-	// mode = E_IDX2
-	if (mode == E_IDX2) {
-		gr_update_model(&gr_idx2, index - pindex);
-	}
 
 	// update contexts
 
@@ -376,9 +357,6 @@ void create()
 {
 	dict_enlarge();
 	enlarge_ctx1();
-
-	gr_init(&gr_idx1, 6);
-	gr_init(&gr_idx2, 0);
 
 	for (size_t e = 0; e < 65536; ++e) {
 		gr_init(&ctx2[e].gr, 0);
