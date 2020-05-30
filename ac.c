@@ -48,20 +48,20 @@ void ac_encode_scale(struct ac *ac, struct bio *bio)
 	// E1/E2
 	while ((ac->mHigh < g_Half) || (ac->mLow >= g_Half)) {
 		if (ac->mHigh < g_Half) {
-			put_bit(bio, 0); // bw_put(ac->bw, 0);
+			put_bit(bio, 0);
 			ac->mLow  = 2 * ac->mLow;
 			ac->mHigh = 2 * ac->mHigh + 1;
 
 			for (; ac->mScale > 0; ac->mScale--) {
-				put_bit(bio, 1); // bw_put(ac->bw, 1);
+				put_bit(bio, 1);
 			}
 		} else if (ac->mLow >= g_Half) {
-			put_bit(bio, 1); // bw_put(ac->bw, 1);
+			put_bit(bio, 1);
 			ac->mLow  = 2 * (ac->mLow  - g_Half);
 			ac->mHigh = 2 * (ac->mHigh - g_Half) + 1;
 
 			for (; ac->mScale > 0; ac->mScale--) {
-				put_bit(bio, 0); // bw_put(ac->bw, 0);
+				put_bit(bio, 0);
 			}
 		}
 	}
@@ -115,16 +115,14 @@ float ac_encode_symbol_query_prob(size_t symb, struct symbol *model, size_t symb
 void ac_encode_flush(struct ac *ac, struct bio *bio)
 {
 	if (ac->mLow < g_FirstQuarter) {
-		put_bit(bio, 0); // bw_put(ac->bw, 0);
+		put_bit(bio, 0);
 
 		for (size_t i=0; i < ac->mScale + 1; i++) {
-			put_bit(bio, 1); // bw_put(ac->bw, 1);
+			put_bit(bio, 1);
 		}
 	} else {
-		put_bit(bio, 1); // bw_put(ac->bw, 1);
+		put_bit(bio, 1);
 	}
-
-	// bio_close(bio, BIO_MODE_WRITE); // bw_flush(ac->bw);
 }
 
 size_t ac_decode_target(struct ac *ac, size_t mStep)
@@ -137,7 +135,7 @@ void ac_decode_init(struct ac *ac, struct bio *bio)
 	ac->mBuffer = 0;
 
 	for (size_t i = 0; i < 31; i++) {
-		ac->mBuffer = (ac->mBuffer << 1) | get_bit(bio); // br_get(ac->br);
+		ac->mBuffer = (ac->mBuffer << 1) | get_bit(bio);
 	}
 }
 
@@ -148,11 +146,11 @@ void ac_decode_scale(struct ac *ac, struct bio *bio)
 		if (ac->mHigh < g_Half) {
 			ac->mLow    = 2 * ac->mLow;
 			ac->mHigh   = 2 * ac->mHigh + 1;
-			ac->mBuffer = 2 * ac->mBuffer + get_bit(bio); // br_get(ac->br);
+			ac->mBuffer = 2 * ac->mBuffer + get_bit(bio);
 		} else if (ac->mLow >= g_Half) {
 			ac->mLow    = 2 * (ac->mLow    - g_Half);
 			ac->mHigh   = 2 * (ac->mHigh   - g_Half) + 1;
-			ac->mBuffer = 2 * (ac->mBuffer - g_Half) + get_bit(bio); // br_get(ac->br);
+			ac->mBuffer = 2 * (ac->mBuffer - g_Half) + get_bit(bio);
 		}
 		ac->mScale = 0;
 	}
@@ -162,7 +160,7 @@ void ac_decode_scale(struct ac *ac, struct bio *bio)
 		ac->mScale++;
 		ac->mLow    = 2 * (ac->mLow    - g_FirstQuarter);
 		ac->mHigh   = 2 * (ac->mHigh   - g_FirstQuarter) + 1;
-		ac->mBuffer = 2 * (ac->mBuffer - g_FirstQuarter) + get_bit(bio); // br_get(ac->br);
+		ac->mBuffer = 2 * (ac->mBuffer - g_FirstQuarter) + get_bit(bio);
 	}
 }
 

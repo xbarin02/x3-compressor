@@ -88,7 +88,7 @@ void ctx_item_inc_freq(struct ctx *ctx, size_t tag)
 	item->freq++;
 }
 
-void ctx_encode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct ctx *ctx, size_t tag)
+void ctx_encode_tag_without_update_ac(struct bio *bio, struct ac *ac, struct ctx *ctx, size_t tag)
 {
 	struct model model;
 	model_create(&model, ctx->items);
@@ -102,7 +102,7 @@ void ctx_encode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct c
 
 	size_t item_index = ctx_query_tag_index(ctx, tag);
 
-	ac_encode_symbol_model(ac, bio_a, item_index, &model);
+	ac_encode_symbol_model(ac, bio, item_index, &model);
 
 	model_destroy(&model);
 }
@@ -128,7 +128,7 @@ float ctx_encode_tag_without_update_ac_query_prob(struct ctx *ctx, size_t tag)
 	return prob;
 }
 
-size_t ctx_decode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct ctx *ctx)
+size_t ctx_decode_tag_without_update_ac(struct bio *bio, struct ac *ac, struct ctx *ctx)
 {
 	struct model model;
 	model_create(&model, ctx->items);
@@ -140,7 +140,7 @@ size_t ctx_decode_tag_without_update_ac(struct bio *bio_a, struct ac *ac, struct
 	count_cum_freqs(model.table, model.count);
 	model.total = calc_total_freq(model.table, model.count);
 
-	size_t item_index = ac_decode_symbol_model(ac, bio_a, &model);
+	size_t item_index = ac_decode_symbol_model(ac, bio, &model);
 
 	model_destroy(&model);
 
