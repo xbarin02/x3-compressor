@@ -6,12 +6,12 @@ x3 &ndash; Golomb-Rice data compressor
 What is it?
 -----------
 
-Experimental data compressor based on unary and Golomb-Rice coding.
+Experimental data compressor based on arithmetic coding.
 
 The algorithm
 -------------
 
-The **x3** uses a dictionary and encodes various code-stream events using a unary, Golomb-Rice, and arithmetic coding.
+The **x3** uses a dictionary and encodes various code-stream events using an arithmetic coding.
 Details are given [here](ALGORITHM.md).
 
 Benchmarks
