@@ -397,7 +397,7 @@ void create()
 	/* initial frequencies in model_events */
 	model_events.table[E_CTX0].freq = 1250 + 1;
 	model_events.table[E_CTX1].freq = 1000 + 1;
-	model_events.table[E_CTX2].freq = 6 + 1;
+	model_events.table[E_CTX2].freq = 1;
 	model_events.table[E_CTX3].freq = 1;
 	model_events.table[E_IDX1].freq = 1;
 	model_events.table[E_IDX2].freq = 1;
