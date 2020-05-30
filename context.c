@@ -74,11 +74,15 @@ int item_compar(const void *l, const void *r)
 /* sort ctx->items[] according to item.freq */
 void ctx_sort(struct ctx *ctx)
 {
+#if 0
 	qsort(ctx->arr, ctx->items, sizeof(struct item), item_compar);
 
 	if (ctx->items > 1) {
 		assert(ctx->arr[0].freq >= ctx->arr[1].freq);
 	}
+#else
+	(void)ctx;
+#endif
 }
 
 void ctx_item_inc_freq(struct ctx *ctx, size_t tag)
