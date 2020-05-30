@@ -10,7 +10,6 @@
 #include "backend.h"
 #include "file.h"
 #include "dict.h"
-#include "gr.h"
 #include "tag_pair.h"
 #include "utils.h"
 #include "bio.h"

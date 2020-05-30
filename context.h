@@ -2,7 +2,6 @@
 #define CONTEXT_H
 
 #include <stddef.h>
-#include "gr.h"
 #include "bio.h"
 #include "ac.h"
 
