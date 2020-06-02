@@ -38,9 +38,8 @@ enum {
 	E_CTX2 = 2, /* tag in ctx2 */
 	E_CTX3 = 3, /* tag in ctx3 */
 	E_IDX1 = 4, /* index in miss1 */
-	E_IDX2 = 5, /* index miss2 */
-	E_NEW  = 6, /* new index/tag (uncompressed) */
-	E_EOF  = 7  /* end of stream */
+	E_NEW  = 5, /* new index/tag (uncompressed) */
+	E_EOF  = 6  /* end of stream */
 };
 
 size_t events[7];
@@ -52,7 +51,6 @@ struct model model_events;
 struct model model_match_size;
 struct model model_chars;
 struct model model_index1;
-struct model model_index2;
 
 float prob_to_bits(float prob)
 {
@@ -60,7 +58,7 @@ float prob_to_bits(float prob)
 }
 
 /* return index */
-size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t context1, size_t context2, size_t pindex)
+size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t context1, size_t context2)
 {
 	// order of tags is (prev_context1, context1, tag)
 	struct tag_pair ctx_pair = make_tag_pair(prev_context1, context1); /* previous two tags */
@@ -104,12 +102,6 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 			index = ac_decode_symbol_model(&ac, bio, &model_index1);
 			size = prob_to_bits(ac_encode_symbol_model_query_prob(index, &model_index1));
 			inc_model(&model_index1, index);
-			tag = dict_get_tag_by_index(index);
-			break;
-		case E_IDX2:
-			index = ac_decode_symbol_model(&ac, bio, &model_index2) + pindex;
-			size = prob_to_bits(ac_encode_symbol_model_query_prob(index - pindex, &model_index2));
-			inc_model(&model_index2, index - pindex);
 			tag = dict_get_tag_by_index(index);
 			break;
 		default:
@@ -166,7 +158,7 @@ size_t decode_tag(size_t decision, struct bio *bio, size_t prev_context1, size_t
 }
 
 /* encode dict[index].tag in context, rather than index */
-void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t context2, size_t index, size_t pindex)
+void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t context2, size_t index)
 {
 	assert(ctx1 != NULL);
 
@@ -205,10 +197,6 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 		prob_ctx3 = ac_encode_symbol_model_query_prob(E_CTX3, &model_events) * ctx_encode_tag_without_update_ac_query_prob(c3, tag);
 	}
 	float prob_idx1 = ac_encode_symbol_model_query_prob(E_IDX1, &model_events) * ac_encode_symbol_model_query_prob(index, &model_index1);
-	float prob_idx2 = 0;
-	if (pindex != (size_t)-1 && index >= pindex) {
-		prob_idx2 = ac_encode_symbol_model_query_prob(E_IDX2, &model_events) * ac_encode_symbol_model_query_prob(index - pindex, &model_index2);
-	}
 
 	int mode = E_IDX1;
 	float prob = prob_idx1;
@@ -228,10 +216,6 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 	if (prob_ctx3 > prob) {
 		mode = E_CTX3;
 		prob = prob_ctx3;
-	}
-	if (prob_idx2 > prob) {
-		mode = E_IDX2;
-		prob = prob_idx2;
 	}
 
 	// encode
@@ -255,10 +239,6 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t c
 		case E_IDX1:
 			ac_encode_symbol_model(&ac, bio, index, &model_index1);
 			inc_model(&model_index1, index);
-			break;
-		case E_IDX2:
-			ac_encode_symbol_model(&ac, bio, index - pindex, &model_index2);
-			inc_model(&model_index2, index - pindex);
 			break;
 	}
 
@@ -323,7 +303,7 @@ void create()
 	enlarge_ctx0();
 
 	/* initialize AC models */
-	model_create(&model_events, 8);
+	model_create(&model_events, 7);
 
 	/* initial frequencies in model_events */
 	model_events.table[E_CTX0].freq = 1250 + 1;
@@ -331,7 +311,6 @@ void create()
 	model_events.table[E_CTX2].freq = 1;
 	model_events.table[E_CTX3].freq = 1;
 	model_events.table[E_IDX1].freq = 1;
-	model_events.table[E_IDX2].freq = 1;
 	model_events.table[E_NEW ].freq = 1;
 	count_cum_freqs(model_events.table, model_events.count);
 	model_events.total = calc_total_freq(model_events.table, model_events.count);
@@ -339,7 +318,6 @@ void create()
 	model_create(&model_match_size, 1 << MATCH_LOGSIZE);
 	model_create(&model_chars, 256);
 	model_create(&model_index1, 0);
-	model_create(&model_index2, 0);
 }
 
 void encode_match(struct bio *bio, char *p, size_t len)
@@ -381,7 +359,6 @@ char *decompress(char *ptr, struct bio *bio)
 	size_t prev_context1 = 0; /* previous context1 */
 	size_t context1 = 0; /* last tag */
 	size_t context2 = 0; /* last two bytes */
-	size_t pindex = (size_t)-1; /* previous index */
 
 	char *p = ptr;
 
@@ -410,7 +387,6 @@ char *decompress(char *ptr, struct bio *bio)
 
 				dict_insert_elem(&e);
 				model_enlarge(&model_index1);
-				model_enlarge(&model_index2);
 			}
 
 			p += len;
@@ -424,13 +400,11 @@ char *decompress(char *ptr, struct bio *bio)
 
 			dict_update_costs(p);
 
-			pindex = (size_t)-1;
-
 			events[E_NEW]++;
 		} else {
 			/* in dictionary */
 
-			size_t index = decode_tag(decision, bio, prev_context1, context1, context2, pindex);
+			size_t index = decode_tag(decision, bio, prev_context1, context1, context2);
 
 			size_t len = dict_get_len_by_index(index);
 
@@ -453,8 +427,6 @@ char *decompress(char *ptr, struct bio *bio)
 
 			/* recalc all costs, sort */
 			dict_update_costs(p);
-
-			pindex = index;
 		}
 	}
 
@@ -468,7 +440,6 @@ void compress(char *ptr, size_t size, struct bio *bio)
 	size_t prev_context1 = 0; /* previous context1 */
 	size_t context1 = 0; /* last tag */
 	size_t context2 = 0; /* last two bytes */
-	size_t pindex = (size_t)-1; /* previous index */
 
 	for (char *p = ptr; p < end; ) {
 		/* (1) look into dictionary */
@@ -478,7 +449,7 @@ void compress(char *ptr, size_t size, struct bio *bio)
 			/* found in dictionary */
 			size_t len = dict_get_len_by_index(index);
 
-			encode_tag(bio, prev_context1, context1, context2, index, pindex);
+			encode_tag(bio, prev_context1, context1, context2, index);
 
 			prev_context1 = context1;
 			context1 = dict_get_tag_by_index(index);
@@ -493,8 +464,6 @@ void compress(char *ptr, size_t size, struct bio *bio)
 
 			/* recalc all costs, sort */
 			dict_update_costs(p);
-
-			pindex = index;
 		} else {
 			/* (2) else find best match and insert it into dictionary */
 			size_t len = find_best_match(p);
@@ -517,7 +486,6 @@ void compress(char *ptr, size_t size, struct bio *bio)
 
 				dict_insert_elem(&e);
 				model_enlarge(&model_index1);
-				model_enlarge(&model_index2);
 			}
 
 			p += len;
@@ -530,8 +498,6 @@ void compress(char *ptr, size_t size, struct bio *bio)
 			}
 
 			dict_update_costs(p);
-
-			pindex = (size_t)-1;
 		}
 	}
 
@@ -570,7 +536,6 @@ void destroy()
 	model_destroy(&model_match_size);
 	model_destroy(&model_chars);
 	model_destroy(&model_index1);
-	model_destroy(&model_index2);
 }
 
 enum {
@@ -768,10 +733,10 @@ int main(int argc, char *argv[])
 	fclose(istream);
 	fclose(ostream);
 
-	size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_IDX1] + events[E_IDX2];
+	size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_CTX2] + events[E_CTX3] + events[E_IDX1];
 
-	size_t stream_size_gr = (size_t)ceil(sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2]);
-	size_t stream_size    = (size_t)ceil(sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_IDX2] + sizes[E_NEW]);
+	size_t stream_size_gr = (size_t)ceil(sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1]);
+	size_t stream_size    = (size_t)ceil(sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_CTX2] + sizes[E_CTX3] + sizes[E_IDX1] + sizes[E_NEW]);
 
 	fprintf(stderr, "input stream size: %zu\n", size);
 	fprintf(stderr, "output stream size: %zu\n", (stream_size + 7) / 8);
@@ -791,14 +756,14 @@ int main(int argc, char *argv[])
 #endif
 
 	fprintf(stderr, "number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
-		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_IDX1], events[E_IDX2], events[E_NEW]);
+		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_CTX3], events[E_IDX1], (size_t)0, events[E_NEW]);
 	fprintf(stderr, "contexts sizes: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
 		100.f * (size_t)ceil(sizes[E_CTX0]) / stream_size,
 		100.f * (size_t)ceil(sizes[E_CTX1]) / stream_size,
 		100.f * (size_t)ceil(sizes[E_CTX2]) / stream_size,
 		100.f * (size_t)ceil(sizes[E_CTX3]) / stream_size,
 		100.f * (size_t)ceil(sizes[E_IDX1]) / stream_size,
-		100.f * (size_t)ceil(sizes[E_IDX2]) / stream_size,
+		0.f,
 		100.f * (size_t)ceil(sizes[E_NEW] ) / stream_size
 	);
 
@@ -810,7 +775,6 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "float PROB_CTX2 = %f;\n", ac_encode_symbol_model_query_prob(E_CTX2, &model_events));
 	fprintf(stderr, "float PROB_CTX3 = %f;\n", ac_encode_symbol_model_query_prob(E_CTX3, &model_events));
 	fprintf(stderr, "float PROB_IDX1 = %f;\n", ac_encode_symbol_model_query_prob(E_IDX1, &model_events));
-	fprintf(stderr, "float PROB_IDX2 = %f;\n", ac_encode_symbol_model_query_prob(E_IDX2, &model_events));
 #endif
 
 	return 0;
