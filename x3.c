@@ -709,26 +709,24 @@ int main(int argc, char *argv[])
 	);
 
 #if 1
-	fprintf(stderr, "\x1b[37;1mGR compression ratio: %f\x1b[0m\n", size / (float)((stream_size + 7) / 8));
-	fprintf(stderr, "\x1b[37;1mAC compression ratio: %f\x1b[0m\n", size / (float)asize);
+	fprintf(stderr, "\x1b[37;1mest. compression ratio: %f\x1b[0m\n", size / (float)((stream_size + 7) / 8));
+	fprintf(stderr, "\x1b[37;1mreal compression ratio: %f\x1b[0m\n", size / (float)asize);
 #else
-	fprintf(stderr, "GR compression ratio: %f\n", size / (float)((stream_size + 7) / 8));
-	fprintf(stderr, "AC compression ratio: %f\n", size / (float)asize);
+	fprintf(stderr, "est. compression ratio: %f\n", size / (float)((stream_size + 7) / 8));
+	fprintf(stderr, "real compression ratio: %f\n", size / (float)asize);
 #endif
 
-	fprintf(stderr, "number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu, miss1 %zu, miss2 %zu, new %zu\n",
-		events[E_CTX0], events[E_CTX1], events[E_CTX2], (size_t)0, events[E_IDX1], (size_t)0, events[E_NEW]);
-	fprintf(stderr, "contexts sizes: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, ctx3 %f%%, miss1 %f%%, miss2 %f%%, new %f%%\n",
+	fprintf(stderr, "number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, miss1 %zu, new %zu\n",
+		events[E_CTX0], events[E_CTX1], events[E_CTX2], events[E_IDX1], events[E_NEW]);
+	fprintf(stderr, "event sizes: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, miss1 %f%%, new %f%%\n",
 		100.f * (size_t)ceil(sizes[E_CTX0]) / stream_size,
 		100.f * (size_t)ceil(sizes[E_CTX1]) / stream_size,
 		100.f * (size_t)ceil(sizes[E_CTX2]) / stream_size,
-		0.f,
 		100.f * (size_t)ceil(sizes[E_IDX1]) / stream_size,
-		0.f,
 		100.f * (size_t)ceil(sizes[E_NEW] ) / stream_size
 	);
 
-	fprintf(stderr, "context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu, ctx3 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536, (size_t)256);
+	fprintf(stderr, "context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536);
 
 #if 0
 	fprintf(stderr, "float PROB_CTX0 = %f;\n", ac_encode_symbol_model_query_prob(E_CTX0, &model_events));
