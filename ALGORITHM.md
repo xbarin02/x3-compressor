@@ -13,7 +13,6 @@ One of the following contexts is used:
 - the last two indexes into the dictionary
 - the last index into the dictionary
 - last two bytes
-- last byte
 - no context (encode directly the index into the dictionary)
 
 The decision on which context to use is based on an estimate of the compression using frequency of prior occurrence.
