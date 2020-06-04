@@ -1,5 +1,5 @@
-x3 &ndash; Golomb-Rice data compressor
-======================================
+x3 &ndash; Experimental data compressor
+=======================================
 
 [![Build Status](https://travis-ci.org/xbarin02/x3-compressor.svg?branch=master)](https://travis-ci.org/xbarin02/x3-compressor)
 
