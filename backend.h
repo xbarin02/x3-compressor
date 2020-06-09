@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 /* match log. size */
-#define MATCH_LOGSIZE 4
+#define MATCH_LOGSIZE 5
 
 /* match size */
 #define MAX_MATCH_LEN (1 << MATCH_LOGSIZE)
