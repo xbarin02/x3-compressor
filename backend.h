@@ -22,9 +22,6 @@ size_t find_best_match(char *p);
 void set_forward_window(size_t n);
 size_t get_forward_window();
 
-void set_num_threads(int n);
-int get_num_threads();
-
 void set_max_match_count(int n);
 int get_max_match_count();
 

@@ -1,5 +1,5 @@
-CFLAGS+=-std=c99 -pedantic -Wall -Wextra -fopenmp
-LDFLAGS+=-fopenmp
+CFLAGS+=-std=c99 -pedantic -Wall -Wextra
+LDFLAGS+=
 LDLIBS+=-lm
 
 BIN=x3

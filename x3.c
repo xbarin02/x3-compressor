@@ -515,7 +515,6 @@ void print_help(char *path)
 	fprintf(stderr, " -h     : print this message\n");
 	fprintf(stderr, " -t NUM : maximum number of matches (affects compression ratio and speed)\n");
 	fprintf(stderr, " -w NUM : window size (in kilobytes, affects compression ratio and speed)\n");
-	fprintf(stderr, " -T NUM : spawns NUM compression threads\n");
 }
 
 int main(int argc, char *argv[])
@@ -523,7 +522,7 @@ int main(int argc, char *argv[])
 	int mode = COMPRESS;
 	int force = 0;
 
-	parse: switch (getopt(argc, argv, "zdfkht:w:T:")) {
+	parse: switch (getopt(argc, argv, "zdfkht:w:")) {
 		case 'z':
 			mode = COMPRESS;
 			goto parse;
@@ -543,9 +542,6 @@ int main(int argc, char *argv[])
 			goto parse;
 		case 'w':
 			set_forward_window(atoi(optarg) * 1024);
-			goto parse;
-		case 'T':
-			set_num_threads(atoi(optarg));
 			goto parse;
 		default:
 			abort();
@@ -607,7 +603,6 @@ int main(int argc, char *argv[])
 	if (mode == COMPRESS) {
 		fprintf(stderr, "max match count: %i\n", get_max_match_count());
 		fprintf(stderr, "forward window: %zu\n", get_forward_window());
-		fprintf(stderr, "threads: %i\n", get_num_threads());
 
 		size_t isize = fsize(istream);
 
