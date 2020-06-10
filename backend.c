@@ -47,6 +47,8 @@ int get_max_match_count()
 	return g_max_match_count;
 }
 
+#if 0
+
 #ifdef _OPENMP
 size_t find_best_match(char *p)
 {
@@ -128,7 +130,9 @@ size_t find_best_match(char *p)
 }
 #endif
 
-size_t fast_find_best_match(char *p)
+#else
+
+size_t find_best_match(char *p)
 {
 	size_t len_count[MAX_MATCH_LEN];
 
@@ -148,19 +152,15 @@ size_t fast_find_best_match(char *p)
 		}
 	}
 
-	// find largest len_count[] <= g_max_match_count
-
-	int max_i = 1;
-	size_t max = len_count[1];
-
-	for (int i = 2; i < MAX_MATCH_LEN; ++i) {
-		if (len_count[i] > max && len_count[i] <= (size_t)g_max_match_count) {
-			max = len_count[i];
-			max_i = i;
+	for (int tc = g_max_match_count; tc > 0; --tc) {
+		for (int i = MAX_MATCH_LEN - 1; i >= 0; --i) {
+			if (len_count[i] > (size_t)tc) {
+				return i + 1;
+			}
 		}
 	}
 
-	assert(max_i > 0);
-
-	return max_i;
+	return 1;
 }
+
+#endif
