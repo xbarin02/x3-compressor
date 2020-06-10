@@ -30,18 +30,18 @@ int get_max_match_count()
 
 size_t find_best_match(char *p)
 {
-	size_t len_count[MAX_MATCH_LEN];
+	size_t count[MAX_MATCH_LEN];
 
 	char *end = p + g_forward_window;
 
 	for (int i = 0; i < MAX_MATCH_LEN; ++i) {
-		len_count[i] = 0;
+		count[i] = 0;
 	}
 
 	for (char *s = p + 1; s < end - MAX_MATCH_LEN; ++s) {
 		for (int i = 0; i < MAX_MATCH_LEN; ++i) {
 			if (p[i] == s[i]) {
-				len_count[i]++;
+				count[i]++;
 			} else {
 				break;
 			}
@@ -50,7 +50,7 @@ size_t find_best_match(char *p)
 
 	for (int tc = g_max_match_count; tc > 0; --tc) {
 		for (int i = MAX_MATCH_LEN - 1; i >= 0; --i) {
-			if (len_count[i] > (size_t)tc) {
+			if (count[i] > (size_t)tc) {
 				return i + 1;
 			}
 		}
