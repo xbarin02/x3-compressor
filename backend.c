@@ -81,11 +81,10 @@ size_t find_best_match(char *p)
 				}
 
 				/* start matching at 's' */
-				for (char *s = s0; s < s1; ) {
+				for (char *s = s0; s < s1; s++) {
 					if (memcmp(p, s, len) == 0) {
 						count[id]++;
 					}
-					s++;
 				}
 
 			}
@@ -113,11 +112,10 @@ size_t find_best_match(char *p)
 			int count = 0;
 
 			/* start matching at 's' */
-			for (char *s = p + len; s < end - len; ) {
+			for (char *s = p + len; s < end - len; s++) {
 				if (memcmp(p, s, len) == 0) {
 					count++;
 				}
-				s++;
 			}
 
 			if (count > tc) {
@@ -129,3 +127,40 @@ size_t find_best_match(char *p)
 	return 1;
 }
 #endif
+
+size_t fast_find_best_match(char *p)
+{
+	size_t len_count[MAX_MATCH_LEN];
+
+	char *end = p + g_forward_window;
+
+	for (int i = 0; i < MAX_MATCH_LEN; ++i) {
+		len_count[i] = 0;
+	}
+
+	for (char *s = p + 1; s < end - MAX_MATCH_LEN; ++s) {
+		for (int i = 0; i < MAX_MATCH_LEN; ++i) {
+			if (p[i] == s[i]) {
+				len_count[i]++;
+			} else {
+				break;
+			}
+		}
+	}
+
+	// find largest len_count[] <= g_max_match_count
+
+	int max_i = 1;
+	size_t max = len_count[1];
+
+	for (int i = 2; i < MAX_MATCH_LEN; ++i) {
+		if (len_count[i] > max && len_count[i] <= (size_t)g_max_match_count) {
+			max = len_count[i];
+			max_i = i;
+		}
+	}
+
+	assert(max_i > 0);
+
+	return max_i;
+}
