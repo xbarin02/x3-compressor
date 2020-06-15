@@ -630,15 +630,15 @@ int main(int argc, char *argv[])
 
 	size_t dict_hit_count = events[E_CTX0] + events[E_CTX1] + events[E_IDX1];
 
-	size_t stream_size_gr = (size_t)ceil(sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_IDX1]);
-	size_t stream_size    = (size_t)ceil(sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_IDX1] + sizes[E_NEW]);
+	size_t stream_size_dict = (size_t)ceil(sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_IDX1]);
+	size_t stream_size      = (size_t)ceil(sizes[E_CTX0] + sizes[E_CTX1] + sizes[E_IDX1] + sizes[E_NEW]);
 
 	fprintf(stderr, "input stream size: %zu\n", size);
 	fprintf(stderr, "output stream size: %zu\n", (stream_size + 7) / 8);
 	fprintf(stderr, "dictionary: hit %zu, miss %zu\n", dict_hit_count, events[E_NEW]);
 
 	fprintf(stderr, "codestream size: dictionary %zu / %f%%, new fragment %zu / %f%%\n",
-		(stream_size_gr + 7) / 8, 100.f * stream_size_gr / stream_size,
+		(stream_size_dict + 7) / 8, 100.f * stream_size_dict / stream_size,
 		((size_t)ceil(sizes[E_NEW]) + 7) / 8, 100.f * (size_t)ceil(sizes[E_NEW]) / stream_size
 	);
 
@@ -650,14 +650,11 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "real compression ratio: %f\n", size / (float)asize);
 #endif
 
-	fprintf(stderr, "number of events: ctx0 %zu, ctx1 %zu, ctx2 %zu, miss1 %zu, new %zu\n",
-		events[E_CTX0], events[E_CTX1],
-		(size_t)0,
-		events[E_IDX1], events[E_NEW]);
-	fprintf(stderr, "event sizes: ctx0 %f%%, ctx1 %f%%, ctx2 %f%%, miss1 %f%%, new %f%%\n",
+	fprintf(stderr, "number of events: ctx0 %zu, ctx1 %zu, miss1 %zu, new %zu\n",
+		events[E_CTX0], events[E_CTX1], events[E_IDX1], events[E_NEW]);
+	fprintf(stderr, "event sizes: ctx0 %f%%, ctx1 %f%%, miss1 %f%%, new %f%%\n",
 		100.f * (size_t)ceil(sizes[E_CTX0]) / stream_size,
 		100.f * (size_t)ceil(sizes[E_CTX1]) / stream_size,
-		0.f,
 		100.f * (size_t)ceil(sizes[E_IDX1]) / stream_size,
 		100.f * (size_t)ceil(sizes[E_NEW] ) / stream_size
 	);
