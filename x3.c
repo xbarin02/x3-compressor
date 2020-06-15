@@ -37,11 +37,12 @@ enum {
 	E_CTX2 = 2, /* tag in ctx2 */
 	E_IDX1 = 3, /* index in miss1 */
 	E_NEW  = 4, /* new index/tag (uncompressed) */
-	E_EOF  = 5  /* end of stream */
+	E_EOF  = 5, /* end of stream */
+	E_LAST
 };
 
-size_t events[6];
-float sizes[6] = { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f };
+size_t events[E_LAST];
+float sizes[E_LAST] = { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f };
 
 struct ac ac;
 
@@ -269,7 +270,7 @@ void create()
 	enlarge_ctx0();
 
 	/* initialize AC models */
-	model_create(&model_events, 6);
+	model_create(&model_events, E_LAST);
 
 	/* initial frequencies in model_events */
 	model_events.table[E_CTX0].freq = 1024;
