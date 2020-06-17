@@ -659,7 +659,7 @@ int main(int argc, char *argv[])
 		100.f * (size_t)ceil(sizes[E_NEW] ) / stream_size
 	);
 
-	fprintf(stderr, "context entries: ctx0 %zu, ctx1 %zu, ctx2 %zu\n", tag_pair_get_elems(), dict_get_elems(), (size_t)65536);
+	fprintf(stderr, "context entries: ctx0 %zu, ctx1 %zu\n", tag_pair_get_elems(), dict_get_elems());
 
 #if 0
 	fprintf(stderr, "float PROB_CTX0 = %f;\n", ac_encode_symbol_model_query_prob(E_CTX0, &model_events));
