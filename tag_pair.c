@@ -4,9 +4,16 @@
 #include <assert.h>
 
 /* map: (tag, tag) -> index */
-struct tag_pair *map0 = NULL; /* root of tree */
-size_t tag_pair_elems = 0;
-size_t tag_pair_size = 1; /* allocated */
+struct tag_pair *map0; /* root of tree */
+size_t tag_pair_elems;
+size_t tag_pair_size; /* allocated */
+
+void tag_pair_create()
+{
+	map0 = NULL;
+	tag_pair_elems = 0;
+	tag_pair_size = 1;
+}
 
 size_t tag_pair_get_elems()
 {

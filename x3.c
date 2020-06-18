@@ -224,6 +224,8 @@ void encode_tag(struct bio *bio, size_t prev_context1, size_t context1, size_t i
 
 void create()
 {
+	tag_pair_create();
+
 	dict_enlarge();
 	enlarge_ctx1();
 

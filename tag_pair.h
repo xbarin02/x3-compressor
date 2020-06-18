@@ -26,6 +26,7 @@ size_t tag_pair_query(struct tag_pair *pair);
 int tag_pair_can_add();
 size_t tag_pair_add(struct tag_pair *pair);
 
+void tag_pair_create();
 void tag_pair_destroy();
 
 #endif /* TAG_PAIR */
