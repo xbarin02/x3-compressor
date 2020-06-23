@@ -463,7 +463,7 @@ int main(int argc, char *argv[])
 	int mode = COMPRESS;
 	int force = 0;
 
-	parse: switch (getopt(argc, argv, "zdfkht:w:")) {
+	parse: switch (getopt(argc, argv, "zdfkht:w:m:")) {
 		case 'z':
 			mode = COMPRESS;
 			goto parse;
@@ -483,6 +483,9 @@ int main(int argc, char *argv[])
 			goto parse;
 		case 'w':
 			set_forward_window(atoi(optarg) * 1024);
+			goto parse;
+		case 'm':
+			set_magic_factor(atoi(optarg));
 			goto parse;
 		default:
 			abort();
@@ -544,6 +547,7 @@ int main(int argc, char *argv[])
 	if (mode == COMPRESS) {
 		fprintf(stderr, "max match count: %i\n", get_max_match_count());
 		fprintf(stderr, "forward window: %zu\n", get_forward_window());
+		fprintf(stderr, "magic factor: %zu\n", get_magic_factor());
 
 		size_t isize = fsize(istream);
 
