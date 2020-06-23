@@ -30,7 +30,7 @@ int get_max_match_count()
 	return g_max_match_count;
 }
 
-static size_t g_factor = 0;
+static size_t g_factor = 4;
 
 size_t get_magic_factor()
 {
@@ -66,7 +66,7 @@ size_t find_best_match(char *p)
 		for (int i = MAX_MATCH_LEN - 1; i >= 0; --i) {
 			if (count[i] > (size_t)tc) {
 				if (i >= 2 && g_factor > 0) {
-					if (dict_find_match(p + i) != (size_t)-1 && dict_get_len_by_index(dict_find_match(p + i)) * g_factor > (i + 1)) {
+					if (dict_find_match(p + i) != (size_t)-1 && dict_get_len_by_index(dict_find_match(p + i)) * g_factor > (size_t)(i + 1)) {
 						goto next;
 					}
 				}

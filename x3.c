@@ -456,6 +456,7 @@ void print_help(char *path)
 	fprintf(stderr, " -h     : print this message\n");
 	fprintf(stderr, " -t NUM : maximum number of matches (affects compression ratio and speed)\n");
 	fprintf(stderr, " -w NUM : window size (in kilobytes, affects compression ratio and speed)\n");
+	fprintf(stderr, " -m NUM : magic factor (affects compression ratio and speed)\n");
 }
 
 int main(int argc, char *argv[])
