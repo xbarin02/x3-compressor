@@ -25,7 +25,9 @@ size_t get_forward_window();
 void set_max_match_count(int n);
 int get_max_match_count();
 
-size_t get_magic_factor();
-void set_magic_factor(size_t factor);
+size_t get_magic_factor1();
+void set_magic_factor1(size_t factor);
+size_t get_magic_factor2();
+void set_magic_factor2(size_t factor);
 
 #endif /* BACKEND_H */

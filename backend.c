@@ -30,16 +30,27 @@ int get_max_match_count()
 	return g_max_match_count;
 }
 
-static size_t g_factor = 4;
+static size_t g_factor1 = 4;
+static size_t g_factor2 = 0;
 
-size_t get_magic_factor()
+size_t get_magic_factor1()
 {
-	return g_factor;
+	return g_factor1;
 }
 
-void set_magic_factor(size_t factor)
+void set_magic_factor1(size_t factor)
 {
-	g_factor = factor;
+	g_factor1 = factor;
+}
+
+size_t get_magic_factor2()
+{
+	return g_factor2;
+}
+
+void set_magic_factor2(size_t factor)
+{
+	g_factor2 = factor;
 }
 
 size_t find_best_match(char *p)
@@ -65,9 +76,16 @@ size_t find_best_match(char *p)
 	for (int tc = g_max_match_count; tc > 0; --tc) {
 		for (int i = MAX_MATCH_LEN - 1; i >= 0; --i) {
 			if (count[i] > (size_t)tc) {
-				if (i >= 2 && g_factor > 0) {
-					if (dict_find_match(p + i) != (size_t)-1 && dict_get_len_by_index(dict_find_match(p + i)) * g_factor > (size_t)(i + 1)) {
+				if (i >= 2 && g_factor1 > 0) {
+					if (dict_find_match(p + i) != (size_t)-1 && dict_get_len_by_index(dict_find_match(p + i)) * g_factor1 > (size_t)(i + 1)) {
 						goto next;
+					}
+				}
+				if (i >= 1 && g_factor2 > 0) {
+					for (int o = 1; o <= i; ++o) {
+						if (dict_find_match(p + o) != (size_t)-1 && ((int)dict_get_len_by_index(dict_find_match(p + o)) - o) * (int)g_factor2 > i + 1) {
+							goto next;
+						}
 					}
 				}
 
