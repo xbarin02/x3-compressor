@@ -55,6 +55,7 @@ Arguments :
 - `-k`     : keep (don't delete) input file (default)
 - `-t NUM` : maximum number of matches (affects compression ratio and speed)
 - `-w NUM` : window size (in kilobytes, affects compression ratio and speed)
+- `-m NUM` : magic factor (affects compression ratio and speed)
 
 Authors
 -------
