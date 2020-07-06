@@ -6,7 +6,7 @@ x3 &ndash; Experimental data compressor
 What is it?
 -----------
 
-Experimental data compressor based on arithmetic coding.
+Experimental dictionary-based data compressor.
 
 The algorithm
 -------------
