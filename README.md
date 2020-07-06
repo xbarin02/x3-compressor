@@ -17,7 +17,7 @@ Details are given [here](ALGORITHM.md).
 Benchmarks
 ----------
 
-| Compressor |       lz4  |      gzip  |        xz  |      zstd  |    brotli  |      ./x3  |
+| Compressor |       lz4  |      gzip  |        xz  |      zstd  |    brotli  |        x3  |
 | ---------- | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: |
 |    dickens |   2.2948   |   2.6461   |   3.6000   |   3.5765   |   3.6044   | **3.7168** |
 |    mozilla |   2.3176   |   2.6966   | **3.8292** |   3.3769   |   3.6922   |   2.7432   |
