@@ -39,6 +39,7 @@ The following options were used:
 - `xz -9 -e`
 - `zstd --ultra -22`
 - `brotli -q 11`
+- The `x3` parameters have been optimized for each file individually.
 
 The files come from the [Silesia](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia) compression corpus.
 
