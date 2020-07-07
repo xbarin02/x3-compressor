@@ -17,6 +17,8 @@ Details are given [here](ALGORITHM.md).
 Benchmarks
 ----------
 
+The table below gives compression ratios on the Silesia corpus.
+
 | Compressor |       lz4  |      gzip  |        xz  |      zstd  |    brotli  |        x3  |
 | ---------- | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: |
 |    dickens |   2.2948   |   2.6461   |   3.6000   |   3.5765   |   3.6044   | **3.7168** |
