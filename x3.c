@@ -352,6 +352,23 @@ char *decompress(char *ptr, struct bio *bio)
 	return p;
 }
 
+static int g_nl = 0;
+
+size_t nl(size_t len)
+{
+	if (g_nl != 0) {
+		switch (len - 1) {
+			case 0: return 1;
+			case 1: return 4;
+			case 2: return 6;
+			case 3: return 8;
+			default: return 9999;
+		}
+	} else {
+		return len;
+	}
+}
+
 void compress(char *ptr, size_t size, struct bio *bio)
 {
 	char *end = ptr + size;
@@ -363,7 +380,7 @@ void compress(char *ptr, size_t size, struct bio *bio)
 		/* (1) look into dictionary */
 		size_t index = dict_find_match(p);
 
-		if (index != (size_t)-1 && dict_get_len_by_index(index) >= find_best_match(p) && p + dict_get_len_by_index(index) <= end) {
+		if (index != (size_t)-1 && nl(dict_get_len_by_index(index)) >= find_best_match(p) && p + dict_get_len_by_index(index) <= end) {
 			/* found in dictionary */
 			size_t len = dict_get_len_by_index(index);
 
@@ -464,7 +481,7 @@ int main(int argc, char *argv[])
 	int mode = COMPRESS;
 	int force = 0;
 
-	parse: switch (getopt(argc, argv, "zdfkht:w:m:n:")) {
+	parse: switch (getopt(argc, argv, "zdfkht:w:m:n:x")) {
 		case 'z':
 			mode = COMPRESS;
 			goto parse;
@@ -490,6 +507,9 @@ int main(int argc, char *argv[])
 			goto parse;
 		case 'n':
 			set_magic_factor2(atoi(optarg));
+			goto parse;
+		case 'x':
+			g_nl = 1;
 			goto parse;
 		default:
 			abort();
