@@ -71,3 +71,8 @@ License
 
 This project is licensed under the MIT License.
 See the [LICENSE.md](LICENSE.md) file for details.
+
+References
+----------
+
+- David Barina, Experimental lossless data compressor, _Microprocessors and Microsystems_, Volume 98, 2023, 104803. https://doi.org/10.1016/j.micpro.2023.104803
